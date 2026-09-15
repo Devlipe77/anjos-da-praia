@@ -75,4 +75,4 @@ VALUES
   ('1001', 'Mariana Souza', '(27) 99876-5432', 'Lucas Souza', 'Praia do Morro - Guarapari'),
   ('1002', 'Carlos Eduardo Lima', '(27) 98112-3344', 'Sofia Lima', 'Praia das Castanheiras - Guarapari'),
   ('1003', 'Renata Vasconcelos', '(27) 99988-7766', 'Bernardo Vasconcelos', 'Praia de Meaípe - Guarapari')
-ON CONFLICT (numero_pulseira) DO NOTHING;
+ON CONFLICT (numero_pulseira) DO NOTHING; 
