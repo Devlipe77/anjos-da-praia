@@ -9,6 +9,7 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+        {/* Anjos da Praia - v1.0.1 */}
         <Navbar />
         <main className="flex-1">
           <Routes>
