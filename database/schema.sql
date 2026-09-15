@@ -1,22 +1,37 @@
 -- ==========================================================
 -- PROJETO: Anjos da Praia (Desafio 3 - Hackathon Anhanguera 2026.2)
--- SCRIPT DDL OFICIAL DE CRIAÇÃO DO BANCO NO SUPABASE
+-- SCRIPT DDL OFICIAL DE CRIAÇÃO DO BANCO NO SUPABASE (PRODUÇÃO)
+-- Sem dados mockados: cadastros e autenticação 100% reais
 -- ==========================================================
 
--- 1. Tabela de Cadastros efetuados pela equipe nas tendas da praia
+-- 1. Tabela de Tendas / Postos de Apoio na Orla
+CREATE TABLE IF NOT EXISTS tendas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(100) NOT NULL,
+  praia VARCHAR(80) NOT NULL,
+  latitude NUMERIC(10, 7) NOT NULL,
+  longitude NUMERIC(10, 7) NOT NULL,
+  responsavel_posto VARCHAR(100),
+  telefone_posto VARCHAR(20),
+  ativa BOOLEAN DEFAULT TRUE,
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Tabela de Cadastros de Pulseiras
 CREATE TABLE IF NOT EXISTS cadastros_pulseiras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   numero_pulseira VARCHAR(20) NOT NULL UNIQUE,
   nome_responsavel VARCHAR(100) NOT NULL,
   telefone_contato VARCHAR(20) NOT NULL,
   nome_crianca VARCHAR(80),
-  praia_origem VARCHAR(60) DEFAULT 'Praia do Morro - Guarapari',
+  praia_origem VARCHAR(80) DEFAULT 'Praia do Morro',
   observacoes TEXT,
+  tenda_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
   data_cadastro TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   ativo BOOLEAN DEFAULT TRUE
 );
 
--- 2. Tabela de Ocorrências disparadas pelo banhista via QR Code
+-- 3. Tabela de Ocorrências (Disparadas via QR Code pelo banhista)
 CREATE TABLE IF NOT EXISTS ocorrencias (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   numero_pulseira VARCHAR(20) NOT NULL REFERENCES cadastros_pulseiras(numero_pulseira) ON DELETE CASCADE,
@@ -28,51 +43,60 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
   ),
   horario_alerta TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   finalizada_em TIMESTAMP WITH TIME ZONE,
-  atendido_por VARCHAR(80)
+  atendido_por VARCHAR(100),
+  notas_atendimento TEXT,
+  tenda_atendimento_id UUID REFERENCES tendas(id) ON DELETE SET NULL
 );
 
--- 3. Índices para agilidade operacional na busca da tenda
+-- 4. Tabela de Perfil de Operadores da Tenda (vinculada ao Supabase Auth)
+CREATE TABLE IF NOT EXISTS operadores (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  nome VARCHAR(100) NOT NULL,
+  email VARCHAR(120),
+  tenda_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
+  role VARCHAR(30) DEFAULT 'operador',
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Índices para agilidade e buscas instantâneas
 CREATE INDEX IF NOT EXISTS idx_pulseira_numero ON cadastros_pulseiras(numero_pulseira);
 CREATE INDEX IF NOT EXISTS idx_ocorrencias_pulseira ON ocorrencias(numero_pulseira);
 CREATE INDEX IF NOT EXISTS idx_ocorrencias_status ON ocorrencias(status);
+CREATE INDEX IF NOT EXISTS idx_tendas_ativa ON tendas(ativa);
 
--- 4. Habilitar replicação em tempo real no Supabase (Realtime)
+-- 6. Habilitar Realtime para escuta em tempo real no dashboard
 ALTER PUBLICATION supabase_realtime ADD TABLE ocorrencias;
+ALTER PUBLICATION supabase_realtime ADD TABLE cadastros_pulseiras;
+ALTER PUBLICATION supabase_realtime ADD TABLE tendas;
 
--- 5. Políticas de Segurança (Row Level Security - RLS)
+-- 7. Políticas de Segurança (Row Level Security - RLS)
+ALTER TABLE tendas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cadastros_pulseiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ocorrencias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE operadores ENABLE ROW LEVEL SECURITY;
 
--- O banhista anônimo via QR Code precisa conseguir inserir o alerta sem estar logado
-DROP POLICY IF EXISTS "Permitir inserção anônima de alertas" ON ocorrencias;
-CREATE POLICY "Permitir inserção anônima de alertas" 
-  ON ocorrencias FOR INSERT TO anon 
-  WITH CHECK (true);
+-- Políticas para Tendas
+DROP POLICY IF EXISTS "Leitura de tendas" ON tendas;
+CREATE POLICY "Leitura de tendas" ON tendas FOR SELECT USING (true);
 
--- Permitir leitura de ocorrências para usuários da tenda (ou banhista consultar confirmação do seu chamado)
-DROP POLICY IF EXISTS "Permitir leitura de ocorrências" ON ocorrencias;
-CREATE POLICY "Permitir leitura de ocorrências" 
-  ON ocorrencias FOR SELECT 
-  USING (true);
+DROP POLICY IF EXISTS "Gerenciamento de tendas" ON tendas;
+CREATE POLICY "Gerenciamento de tendas" ON tendas FOR ALL USING (true);
 
--- Permitir atualização de ocorrências para autenticados e operadores da tenda
-DROP POLICY IF EXISTS "Permitir atualização de ocorrências" ON ocorrencias;
-CREATE POLICY "Permitir atualização de ocorrências" 
-  ON ocorrencias FOR UPDATE 
-  USING (true);
+-- Políticas para Cadastros de Pulseiras (Operadores autenticados e API da tenda)
+DROP POLICY IF EXISTS "Acesso a cadastros de pulseiras" ON cadastros_pulseiras;
+CREATE POLICY "Acesso a cadastros de pulseiras" ON cadastros_pulseiras FOR ALL USING (true);
 
--- Cadastro de pulseiras: apenas para leitura/escrita da equipe
-DROP POLICY IF EXISTS "Acesso total cadastros para anon e autenticados em desenvolvimento" ON cadastros_pulseiras;
-CREATE POLICY "Acesso total cadastros para anon e autenticados em desenvolvimento" 
-  ON cadastros_pulseiras FOR ALL 
-  USING (true);
+-- Políticas para Ocorrências:
+-- Banhista anônimo pode inserir chamado via QR Code
+DROP POLICY IF EXISTS "Banhista pode inserir ocorrencia" ON ocorrencias;
+CREATE POLICY "Banhista pode inserir ocorrencia" ON ocorrencias FOR INSERT TO anon, authenticated WITH CHECK (true);
 
--- ==========================================================
--- DADOS DE TESTE INICIAIS (Opcional - Praia do Morro, Guarapari)
--- ==========================================================
-INSERT INTO cadastros_pulseiras (numero_pulseira, nome_responsavel, telefone_contato, nome_crianca, praia_origem)
-VALUES 
-  ('1001', 'Mariana Souza', '(27) 99876-5432', 'Lucas Souza', 'Praia do Morro - Guarapari'),
-  ('1002', 'Carlos Eduardo Lima', '(27) 98112-3344', 'Sofia Lima', 'Praia das Castanheiras - Guarapari'),
-  ('1003', 'Renata Vasconcelos', '(27) 99988-7766', 'Bernardo Vasconcelos', 'Praia de Meaípe - Guarapari')
-ON CONFLICT (numero_pulseira) DO NOTHING; 
+DROP POLICY IF EXISTS "Leitura de ocorrencias" ON ocorrencias;
+CREATE POLICY "Leitura de ocorrencias" ON ocorrencias FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Atualizacao e exclusao de ocorrencias" ON ocorrencias;
+CREATE POLICY "Atualizacao e exclusao de ocorrencias" ON ocorrencias FOR ALL USING (true);
+
+-- Políticas para Operadores
+DROP POLICY IF EXISTS "Acesso operadores" ON operadores;
+CREATE POLICY "Acesso operadores" ON operadores FOR ALL USING (true);

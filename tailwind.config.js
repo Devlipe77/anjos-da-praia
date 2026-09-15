@@ -6,27 +6,41 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+      },
       colors: {
-        ocean: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+        // Cores principais
+        primary: {
+          DEFAULT: '#FF6B35', // Coral / Sol
+          dark: '#E8531F',    // Hover
+        },
+        secondary: {
+          DEFAULT: '#0B6EFD', // Azul-oceano
+          dark: '#0857CC',    // Hover
         },
         sand: {
-          50: '#fdfbf7',
-          100: '#f7f2e8',
-          200: '#eee3cb',
-          300: '#e1cca5',
-          400: '#d0ad78',
-          500: '#c29254',
-          600: '#b07943',
+          DEFAULT: '#F9F1E7', // Areia clara
+        },
+        // Neutros
+        graphite: '#1A1D1F',  // Texto principal
+        stonegray: '#6B7280', // Texto secundário
+        mist: '#E5E7EB',      // Bordas / divisores
+        page: '#F9FAFB',      // Fundo geral da página
+        // Feedback
+        brand: {
+          success: '#16A34A',
+          'success-bg': '#DCFCE7',
+          warning: '#F59E0B',
+          'warning-bg': '#FEF3C7',
+          danger: '#DC2626',
+          'danger-bg': '#FEE2E2',
+        },
+        tropical: {
+          turquoise: '#14B8A6',
+          pool: '#38BDF8',
+          sunset: '#FB923C',
+          shell: '#FDA4AF',
         }
       }
     },

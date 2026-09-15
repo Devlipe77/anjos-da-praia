@@ -2,39 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos de customização e animações suaves */
+:root {
+  --color-primary: #FF6B35;
+  --color-primary-dark: #E8531F;
+  --color-secondary: #0B6EFD;
+  --color-secondary-dark: #0857CC;
+  --color-sand: #F9F1E7;
+
+  --color-text-primary: #1A1D1F;
+  --color-text-secondary: #6B7280;
+  --color-border: #E5E7EB;
+  --color-bg-page: #F9FAFB;
+  --color-bg-white: #FFFFFF;
+
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEE2E2;
+
+  --color-tropical-turquoise: #14B8A6;
+  --color-tropical-pool-blue: #38BDF8;
+  --color-tropical-sunset: #FB923C;
+  --color-tropical-shell-pink: #FDA4AF;
+
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 @layer base {
   body {
-    @apply antialiased text-slate-800 bg-slate-50;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-page);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Fix obrigatório para o contêiner Leaflet conforme relatório técnico */
+/* Fix obrigatório para o Leaflet */
 .leaflet-container {
   width: 100%;
   height: 100%;
   min-height: 380px !important;
   border-radius: 0.75rem;
   z-index: 10;
+  font-family: inherit;
 }
 
-/* Efeito pulsante de alerta em tempo real */
-@keyframes pulse-ring {
+/* Efeito pulsante de alerta na cor Coral / Sol (#FF6B35) */
+@keyframes coral-pulse-ring {
   0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7);
   }
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 16px rgba(255, 107, 53, 0);
   }
   100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
   }
 }
 
 .alert-pulse {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: coral-pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

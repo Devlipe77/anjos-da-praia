@@ -4,6 +4,27 @@ export type StatusOcorrencia =
   | 'Criança recebida' 
   | 'Reencontro realizado';
 
+export interface Tenda {
+  id?: string;
+  nome: string;
+  praia: string;
+  latitude: number;
+  longitude: number;
+  responsavel_posto?: string;
+  telefone_posto?: string;
+  ativa?: boolean;
+  criado_em?: string;
+}
+
+export interface Operador {
+  id: string;
+  nome: string;
+  email?: string;
+  tenda_id?: string | null;
+  role?: string;
+  criado_em?: string;
+}
+
 export interface PulseiraCadastro {
   id?: string;
   numero_pulseira: string;
@@ -12,6 +33,7 @@ export interface PulseiraCadastro {
   nome_crianca?: string;
   praia_origem?: string;
   observacoes?: string;
+  tenda_id?: string | null;
   data_cadastro?: string;
   ativo?: boolean;
 }
@@ -26,6 +48,12 @@ export interface Ocorrencia {
   horario_alerta: string;
   finalizada_em?: string | null;
   atendido_por?: string | null;
-  // Joins enriquecidos pelo sistema da tenda
+  notas_atendimento?: string | null;
+  tenda_atendimento_id?: string | null;
+  // Campos calculados ou populados em runtime
   cadastro?: PulseiraCadastro;
+  tendaMaisProxima?: {
+    tenda: Tenda;
+    distanciaMetros: number;
+  };
 }
