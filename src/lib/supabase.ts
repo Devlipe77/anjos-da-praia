@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PulseiraCadastro, Ocorrencia, StatusOcorrencia } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://agpynfhvmyaiupynrznx.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_iLl3WxfJVDP1oX5StEFAkQ_nMyHuMRu';
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
