@@ -1,6 +1,6 @@
 import React from 'react';
 import { StatusOcorrencia } from '../types';
-import { AlertCircle, Navigation, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { AlertCircle, Navigation, ShieldCheck, HeartHandshake, UserCheck } from 'lucide-react';
 
 interface StatusBadgeProps {
   status: StatusOcorrencia;
@@ -39,6 +39,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         <span className={`inline-flex items-center rounded-full bg-[#F3E8FF] text-[#7E22CE] border border-[#E9D5FF] ${sizeClasses} ${className}`}>
           <ShieldCheck className="w-3.5 h-3.5 text-[#9333EA]" />
           <span>Criança na tenda</span>
+        </span>
+      );
+    case 'Responsáveis localizados':
+      return (
+        <span className={`inline-flex items-center rounded-full bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] ${sizeClasses} ${className}`}>
+          <UserCheck className="w-3.5 h-3.5 text-[#0284C7]" />
+          <span>Pais contatados</span>
         </span>
       );
     case 'Reencontro realizado':

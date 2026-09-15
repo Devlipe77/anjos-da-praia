@@ -27,7 +27,9 @@ import {
   User as UserIcon,
   Check,
   Flame,
-  Crosshair
+  Crosshair,
+  FileSpreadsheet,
+  FileDown
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
@@ -41,7 +43,7 @@ export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Seção ativa do menu lateral
-  const [secaoAtiva, setSecaoAtiva] = useState<'dashboard' | 'monitoramento' | 'pulseiras' | 'tendas' | 'impressao'>('dashboard');
+  const [secaoAtiva, setSecaoAtiva] = useState<'dashboard' | 'monitoramento' | 'pulseiras' | 'tendas' | 'impressao' | 'relatorios'>('dashboard');
   const [sidebarAberta, setSidebarAberta] = useState(false);
 
   // Estados de dados principais
@@ -399,6 +401,53 @@ export const AdminPage: React.FC = () => {
     return limpo.startsWith('55') ? limpo : `55${limpo}`;
   };
 
+  // Exportação de Relatório Geral em formato CSV para a Associação e Parceiros
+  const exportarRelatorioCSV = () => {
+    try {
+      const headers = [
+        'ID Ocorrencia',
+        'Numero Pulseira',
+        'Crianca',
+        'Responsavel',
+        'Telefone',
+        'Status',
+        'Horario Alerta',
+        'Latitude',
+        'Longitude',
+        'Tenda Mais Proxima',
+        'Distancia (m)'
+      ];
+
+      const linhas = ocorrencias.map(oco => [
+        `"${oco.id || ''}"`,
+        `"${oco.numero_pulseira || ''}"`,
+        `"${oco.cadastro?.nome_crianca || 'Nao identificado'}"`,
+        `"${oco.cadastro?.nome_responsavel || ''}"`,
+        `"${oco.cadastro?.telefone_contato || ''}"`,
+        `"${oco.status || ''}"`,
+        `"${oco.horario_alerta ? new Date(oco.horario_alerta).toLocaleString('pt-BR') : ''}"`,
+        `"${oco.latitude || ''}"`,
+        `"${oco.longitude || ''}"`,
+        `"${oco.tendaMaisProxima?.tenda?.nome || 'N/A'}"`,
+        `"${oco.tendaMaisProxima?.distanciaMetros || ''}"`
+      ]);
+
+      const csvContent = '\uFEFF' + [headers.join(';'), ...linhas.map(l => l.join(';'))].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `relatorio_anjos_da_praia_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Relatório CSV exportado com sucesso!', 'sucesso');
+    } catch (e: any) {
+      showToast('Erro ao gerar relatório CSV: ' + e.message, 'erro');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex text-[#1A1D1F]">
       
@@ -526,6 +575,20 @@ export const AdminPage: React.FC = () => {
                 <span>Emissão em Lote</span>
               </div>
             </button>
+
+            <button
+              onClick={() => { setSecaoAtiva('relatorios'); setSidebarAberta(false); }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                secaoAtiva === 'relatorios'
+                  ? 'bg-[#FF6B35] text-white shadow-sm'
+                  : 'text-[#6B7280] hover:bg-[#F9F1E7] hover:text-[#1A1D1F]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Relatórios & Praias</span>
+              </div>
+            </button>
           </nav>
         </div>
 
@@ -572,10 +635,19 @@ export const AdminPage: React.FC = () => {
               {secaoAtiva === 'pulseiras' && 'Gerenciamento de Pulseiras'}
               {secaoAtiva === 'tendas' && 'Postos de Atendimento na Orla'}
               {secaoAtiva === 'impressao' && 'Emissão e Impressão de Pulseiras'}
+              {secaoAtiva === 'relatorios' && 'Relatórios e Indicadores por Praia'}
             </h1>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={exportarRelatorioCSV}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+              title="Exportar dados consolidados em planilha CSV"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
             <span className="hidden md:inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#15803D] text-[11px] font-bold px-2.5 py-1 rounded-full border border-[#BBF7D0]">
               <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-ping"></span>
               <span>Supabase Realtime Ativo</span>
@@ -898,6 +970,7 @@ export const AdminPage: React.FC = () => {
                                 <option value="Criança localizada">Criança localizada</option>
                                 <option value="Equipe a caminho">Equipe a caminho</option>
                                 <option value="Criança recebida">Criança na tenda</option>
+                                <option value="Responsáveis localizados">Responsáveis localizados</option>
                                 <option value="Reencontro realizado">Reencontro feito 🎉</option>
                               </select>
                             )}
@@ -1207,6 +1280,122 @@ export const AdminPage: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+
+            </div>
+          )}
+
+          {/* ===================================================== */}
+          {/* SEÇÃO 6: 📈 RELATÓRIOS & ESTATÍSTICAS POR PRAIA */}
+          {/* ===================================================== */}
+          {secaoAtiva === 'relatorios' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              
+              {/* Header do Relatório com Exportador */}
+              <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-black text-[#1A1D1F] flex items-center gap-2">
+                    <FileSpreadsheet className="w-5 h-5 text-[#FF6B35]" />
+                    <span>Relatório Consolidado de Ocorrências & Praias</span>
+                  </h2>
+                  <p className="text-xs text-[#6B7280] mt-1">
+                    Histórico completo para prestação de contas com a Prefeitura de Guarapari e Corpo de Bombeiros Militar ES
+                  </p>
+                </div>
+
+                <button
+                  onClick={exportarRelatorioCSV}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+                >
+                  <FileDown className="w-4 h-4" />
+                  <span>Baixar Planilha Completa (.CSV)</span>
+                </button>
+              </div>
+
+              {/* Indicadores por Praia */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { praia: 'Praia do Morro', cor: 'border-[#FF6B35]' },
+                  { praia: 'Praia das Castanheiras', cor: 'border-[#0B6EFD]' },
+                  { praia: 'Praia da Areia Preta', cor: 'border-[#10B981]' },
+                  { praia: 'Praia de Meaípe', cor: 'border-[#8B5CF6]' }
+                ].map(({ praia, cor }) => {
+                  const ocosPraia = ocorrencias.filter(o => o.cadastro?.praia_origem === praia || o.tendaMaisProxima?.tenda?.praia === praia);
+                  const concluidas = ocosPraia.filter(o => o.status === 'Reencontro realizado').length;
+                  const taxa = ocosPraia.length > 0 ? Math.round((concluidas / ocosPraia.length) * 100) : 100;
+
+                  return (
+                    <div key={praia} className={`bg-white p-5 rounded-2xl border-t-4 ${cor} border border-[#E5E7EB] shadow-sm space-y-3`}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-[#1A1D1F] truncate">{praia}</span>
+                        <MapPin className="w-3.5 h-3.5 text-[#6B7280]" />
+                      </div>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-black text-[#1A1D1F]">{ocosPraia.length}</span>
+                        <span className="text-[11px] text-[#16A34A] font-bold">{taxa}% reencontrados</span>
+                      </div>
+                      <div className="text-[10px] text-[#6B7280] pt-1 border-t border-[#E5E7EB] flex justify-between">
+                        <span>{concluidas} finalizados</span>
+                        <span>{ocosPraia.length - concluidas} em aberto</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabela de Registro Geral com Auditoria LGPD */}
+              <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-extrabold text-sm text-[#1A1D1F]">
+                    Auditoria de Ocorrências Registradas ({ocorrencias.length})
+                  </h3>
+                  <span className="text-[11px] bg-[#EFF6FF] text-[#1D4ED8] font-semibold px-2.5 py-1 rounded-lg border border-[#BFDBFE]">
+                    Dados protegidos conforme LGPD
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-[#1A1D1F]">
+                    <thead className="bg-[#F9FAFB] text-[#6B7280] uppercase font-semibold border-b border-[#E5E7EB]">
+                      <tr>
+                        <th className="py-2.5 px-3">Pulseira</th>
+                        <th className="py-2.5 px-3">Criança</th>
+                        <th className="py-2.5 px-3">Responsável</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Horário</th>
+                        <th className="py-2.5 px-3">Tenda Próxima</th>
+                        <th className="py-2.5 px-3 text-right">Telefone</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {ocorrencias.map((oco) => (
+                        <tr key={oco.id} className="hover:bg-[#F9FAFB]">
+                          <td className="py-3 px-3 font-mono font-black text-[#FF6B35]">
+                            #{oco.numero_pulseira}
+                          </td>
+                          <td className="py-3 px-3 font-bold">
+                            {oco.cadastro?.nome_crianca || 'Não identificado'}
+                          </td>
+                          <td className="py-3 px-3 text-[#6B7280]">
+                            {oco.cadastro?.nome_responsavel || 'Desconhecido'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <StatusBadge status={oco.status} size="sm" />
+                          </td>
+                          <td className="py-3 px-3 font-mono text-[11px] text-[#6B7280]">
+                            {oco.horario_alerta ? new Date(oco.horario_alerta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </td>
+                          <td className="py-3 px-3 text-[11px] text-[#6B7280]">
+                            {oco.tendaMaisProxima?.tenda?.nome || 'Pendente'}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-[11px]">
+                            {oco.cadastro?.telefone_contato || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
             </div>

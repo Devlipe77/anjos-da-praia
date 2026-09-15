@@ -2,6 +2,7 @@ export type StatusOcorrencia =
   | 'Criança localizada' 
   | 'Equipe a caminho' 
   | 'Criança recebida' 
+  | 'Responsáveis localizados'
   | 'Reencontro realizado';
 
 export interface Tenda {

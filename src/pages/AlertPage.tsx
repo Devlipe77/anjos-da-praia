@@ -9,7 +9,9 @@ import {
   ArrowLeft, 
   Loader2, 
   Sparkles,
-  LifeBuoy
+  LifeBuoy,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { dataService } from '../lib/supabase';
 import { traduzirErroSupabase } from '../types';
@@ -21,9 +23,24 @@ export const AlertPage: React.FC = () => {
 
   const [numeroPulseira, setNumeroPulseira] = useState(pulseiraUrl);
   const [loading, setLoading] = useState(false);
+  const [tentativaReenvio, setTentativaReenvio] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [coordenadasEnviadas, setCoordenadasEnviadas] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Monitorar se a rede do dispositivo está ativa
+  const [online, setOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (pulseiraUrl) {
@@ -31,9 +48,10 @@ export const AlertPage: React.FC = () => {
     }
   }, [pulseiraUrl]);
 
-  const dispararAlertaComCoordenadas = async (lat: number, lng: number, precisao = 10) => {
+  const dispararAlertaComCoordenadas = async (lat: number, lng: number, precisao = 10, tentativa = 1) => {
     setLoading(true);
     setErro(null);
+    setTentativaReenvio(tentativa);
 
     try {
       if (!numeroPulseira.trim()) {
@@ -60,10 +78,18 @@ export const AlertPage: React.FC = () => {
         // Silencioso
       }
     } catch (err: any) {
-      console.error(err);
+      console.warn(`Tentativa ${tentativa} falhou:`, err);
+      // Se for instabilidade de rede e menos de 3 tentativas, tenta novamente após 2 segundos
+      if (tentativa < 3 && (!navigator.onLine || err?.message?.includes('fetch') || err?.message?.includes('network'))) {
+        setTimeout(() => {
+          dispararAlertaComCoordenadas(lat, lng, precisao, tentativa + 1);
+        }, 2000);
+        return;
+      }
       setErro(traduzirErroSupabase(err));
     } finally {
       setLoading(false);
+      setTentativaReenvio(0);
     }
   };
 
@@ -113,6 +139,14 @@ export const AlertPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col justify-between">
       
+      {/* Aviso de Conexão Instável se offline */}
+      {!online && (
+        <div className="bg-[#FEF3C7] border-b border-[#FDE68A] text-[#B45309] text-[11px] font-bold py-1 px-4 text-center flex items-center justify-center gap-1.5">
+          <WifiOff className="w-3.5 h-3.5" />
+          <span>Sinal móvel instável. O sistema tentará reconectar automaticamente ao enviar.</span>
+        </div>
+      )}
+
       {/* Topo Limpo */}
       <header className="p-3 sm:p-4 flex items-center justify-between max-w-md mx-auto w-full">
         <Link 
@@ -211,7 +245,7 @@ export const AlertPage: React.FC = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Capturando GPS e Enviando...</span>
+                      <span>{tentativaReenvio > 1 ? `Reconectando (tentativa ${tentativaReenvio}/3)...` : 'Capturando GPS e Enviando...'}</span>
                     </>
                   ) : (
                     <>
