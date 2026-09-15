@@ -49,6 +49,27 @@
   font-family: inherit;
 }
 
+/* Fix para os popups do Leaflet: cor de texto, espaçamento e botões */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+  min-width: 220px !important;
+}
+
+.leaflet-popup-content a {
+  color: #FFFFFF !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  display: flex !important;
+}
+
 /* Efeito pulsante de alerta na cor Coral / Sol (#FF6B35) */
 @keyframes coral-pulse-ring {
   0% {

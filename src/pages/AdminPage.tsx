@@ -26,10 +26,11 @@ import {
   AlertTriangle,
   User as UserIcon,
   Check,
-  Flame
+  Flame,
+  Crosshair
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
-import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia } from '../types';
+import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
 import { MapView } from '../components/MapView';
 import { StatusBadge } from '../components/StatusBadge';
 import { QRCodeModal } from '../components/QRCodeModal';
@@ -83,6 +84,7 @@ export const AdminPage: React.FC = () => {
   const [formPulseiraCrianca, setFormPulseiraCrianca] = useState('');
   const [formPulseiraPraia, setFormPulseiraPraia] = useState('Praia do Morro');
   const [formPulseiraObs, setFormPulseiraObs] = useState('');
+  const [erroModalPulseira, setErroModalPulseira] = useState<string | null>(null);
 
   // Formulário Nova Tenda
   const [formTendaNome, setFormTendaNome] = useState('');
@@ -91,10 +93,57 @@ export const AdminPage: React.FC = () => {
   const [formTendaLng, setFormTendaLng] = useState('-40.4950');
   const [formTendaResp, setFormTendaResp] = useState('');
   const [formTendaTel, setFormTendaTel] = useState('');
+  const [erroModalTenda, setErroModalTenda] = useState<string | null>(null);
 
   // Configuração de Lote de Impressão
   const [loteInicio, setLoteInicio] = useState(1001);
   const [loteQuantidade, setLoteQuantidade] = useState(12);
+
+  // Notificações Toast no Topo
+  const [toast, setToast] = useState<{ tipo: 'erro' | 'sucesso'; mensagem: string } | null>(null);
+
+  const showToast = (mensagem: string, tipo: 'erro' | 'sucesso' = 'erro') => {
+    setToast({ tipo, mensagem });
+    setTimeout(() => {
+      setToast(null);
+    }, 5000);
+  };
+
+  // Presets de Praias e Coordenadas de Guarapari
+  const PRESETS_GUARAPARI = [
+    { nome: 'Praia do Morro (Central)', praia: 'Praia do Morro', lat: -20.6590, lng: -40.4950 },
+    { nome: 'Pedra do Siribeira', praia: 'Praia do Morro', lat: -20.6525, lng: -40.4850 },
+    { nome: 'Castanheiras', praia: 'Praia das Castanheiras', lat: -20.6720, lng: -40.4975 },
+    { nome: 'Areia Preta', praia: 'Praia da Areia Preta', lat: -20.6765, lng: -40.5005 },
+    { nome: 'Meaípe', praia: 'Praia de Meaípe', lat: -20.7420, lng: -40.5280 },
+    { nome: 'Enseada Azul', praia: 'Enseada Azul', lat: -20.7150, lng: -40.5180 },
+  ];
+
+  // Estado de captura de GPS para tendas
+  const [capturandoGpsTenda, setCapturandoGpsTenda] = useState(false);
+
+  const handleCapturarGpsDispositivo = (callback: (lat: number, lng: number) => void) => {
+    if (!('geolocation' in navigator)) {
+      alert('Geolocalização não suportada neste navegador.');
+      return;
+    }
+    setCapturandoGpsTenda(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCapturandoGpsTenda(false);
+        callback(
+          parseFloat(pos.coords.latitude.toFixed(6)),
+          parseFloat(pos.coords.longitude.toFixed(6))
+        );
+      },
+      (err) => {
+        setCapturandoGpsTenda(false);
+        console.warn('GPS não capturado:', err);
+        alert('Não foi possível obter o GPS com precisão. Verifique a permissão de localização do navegador.');
+      },
+      { enableHighAccuracy: true, timeout: 9000, maximumAge: 0 }
+    );
+  };
 
   // Bip sonoro suave via Web Audio API para novos alertas
   const tocarBipAlerta = () => {
@@ -207,8 +256,12 @@ export const AdminPage: React.FC = () => {
       setFormPulseiraTelefone('');
       setFormPulseiraCrianca('');
       setFormPulseiraObs('');
+      setErroModalPulseira(null);
+      showToast('Pulseira cadastrada com sucesso!', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao cadastrar pulseira.');
+      const msg = traduzirErroSupabase(err);
+      setErroModalPulseira(msg);
+      showToast(msg, 'erro');
     }
   };
 
@@ -228,8 +281,9 @@ export const AdminPage: React.FC = () => {
 
       setCadastros(cadastros.map(c => c.id === atualizada.id ? atualizada : c));
       setModalEdicaoPulseira(null);
+      showToast('Cadastro atualizado com sucesso!', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao atualizar dados da pulseira.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -240,8 +294,9 @@ export const AdminPage: React.FC = () => {
       await dataService.excluirPulseira(modalExclusaoPulseira.id);
       setCadastros(cadastros.filter(c => c.id !== modalExclusaoPulseira.id));
       setModalExclusaoPulseira(null);
+      showToast('Pulseira removida com sucesso.', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao excluir pulseira.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -253,8 +308,9 @@ export const AdminPage: React.FC = () => {
         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
       }
       await carregarDados();
+      showToast(`Status atualizado para: ${novoStatus}`, 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao atualizar status.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -265,8 +321,9 @@ export const AdminPage: React.FC = () => {
       await dataService.excluirOcorrencia(modalExclusaoOcorrencia.id);
       setOcorrencias(ocorrencias.filter(o => o.id !== modalExclusaoOcorrencia.id));
       setModalExclusaoOcorrencia(null);
+      showToast('Ocorrência removida do sistema.', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao excluir ocorrência.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -291,8 +348,12 @@ export const AdminPage: React.FC = () => {
       setFormTendaNome('');
       setFormTendaResp('');
       setFormTendaTel('');
+      setErroModalTenda(null);
+      showToast('Posto cadastrado com sucesso!', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao cadastrar tenda.');
+      const msg = traduzirErroSupabase(err);
+      setErroModalTenda(msg);
+      showToast(msg, 'erro');
     }
   };
 
@@ -305,6 +366,8 @@ export const AdminPage: React.FC = () => {
       const atualizada = await dataService.atualizarTenda(modalEdicaoTenda.id, {
         nome: modalEdicaoTenda.nome,
         praia: modalEdicaoTenda.praia,
+        latitude: parseFloat(String(modalEdicaoTenda.latitude)) || 0,
+        longitude: parseFloat(String(modalEdicaoTenda.longitude)) || 0,
         responsavel_posto: modalEdicaoTenda.responsavel_posto,
         telefone_posto: modalEdicaoTenda.telefone_posto,
         ativa: modalEdicaoTenda.ativa,
@@ -312,8 +375,9 @@ export const AdminPage: React.FC = () => {
 
       setTendas(tendas.map(t => t.id === atualizada.id ? atualizada : t));
       setModalEdicaoTenda(null);
+      showToast('Posto atualizado com sucesso!', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao atualizar tenda.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -324,8 +388,9 @@ export const AdminPage: React.FC = () => {
       await dataService.excluirTenda(modalExclusaoTenda.id);
       setTendas(tendas.filter(t => t.id !== modalExclusaoTenda.id));
       setModalExclusaoTenda(null);
+      showToast('Posto excluído com sucesso.', 'sucesso');
     } catch (err: any) {
-      alert(err.message || 'Erro ao excluir tenda.');
+      showToast(traduzirErroSupabase(err), 'erro');
     }
   };
 
@@ -526,8 +591,35 @@ export const AdminPage: React.FC = () => {
           </div>
         </header>
 
-        {/* Conteúdo Dinâmico da Seção */}
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+        {/* Toast Notificação de Retorno */}
+        {toast && (
+          <div className="fixed top-4 right-4 z-50 max-w-md animate-in slide-in-from-top-3 duration-200 shadow-2xl">
+            <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+              toast.tipo === 'erro'
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            }`}>
+              <div className={`p-1.5 rounded-xl ${toast.tipo === 'erro' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                {toast.tipo === 'erro' ? <AlertTriangle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+              </div>
+              <div className="flex-1 text-xs">
+                <div className="font-black text-sm mb-0.5">
+                  {toast.tipo === 'erro' ? 'Atenção Operacional' : 'Operação Concluída'}
+                </div>
+                <p className="leading-relaxed font-medium">{toast.mensagem}</p>
+              </div>
+              <button 
+                onClick={() => setToast(null)}
+                className="text-gray-400 hover:text-gray-700 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Conteúdo Dinâmico da Seção (Expandido para 100% da tela) */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full space-y-6">
 
           {/* ===================================================== */}
           {/* SEÇÃO 1: 📊 DASHBOARD (HOME DO ADMIN) */}
@@ -686,11 +778,11 @@ export const AdminPage: React.FC = () => {
           {/* SEÇÃO 2: 🚨 MONITORAMENTO & MAPA */}
           {/* ===================================================== */}
           {secaoAtiva === 'monitoramento' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[calc(100vh-8.5rem)] animate-in fade-in duration-200">
               
               {/* Lista de Chamados à Esquerda */}
-              <div className="lg:col-span-5 space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="lg:col-span-5 flex flex-col h-full space-y-3 overflow-hidden">
+                <div className="flex items-center justify-between flex-shrink-0">
                   <h2 className="text-sm font-extrabold text-[#1A1D1F] flex items-center gap-2">
                     <Bell className="w-4 h-4 text-[#FF6B35]" />
                     <span>Fila Operacional ({chamadosAtivos.length} ativos)</span>
@@ -702,7 +794,7 @@ export const AdminPage: React.FC = () => {
                     Nenhum alerta registrado até o momento.
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-1.5">
                     {ocorrencias.map((oco) => {
                       const isSelected = selectedOcorrencia?.id === oco.id;
                       const isFinalizado = oco.status === 'Reencontro realizado';
@@ -829,8 +921,8 @@ export const AdminPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Mapa Leaflet à Direita */}
-              <div className="lg:col-span-7 bg-white p-3 rounded-2xl border border-[#E5E7EB] shadow-sm min-h-[500px] flex flex-col">
+              {/* Mapa Leaflet à Direita (Altura total da tela) */}
+              <div className="lg:col-span-7 bg-white p-3 rounded-2xl border border-[#E5E7EB] shadow-sm h-full min-h-[550px] flex flex-col">
                 <MapView
                   ocorrencias={ocorrencias}
                   tendas={tendas}
@@ -1136,6 +1228,14 @@ export const AdminPage: React.FC = () => {
               <button onClick={() => setModalNovaPulseira(false)}><X className="w-5 h-5 text-[#6B7280]" /></button>
             </div>
             <form onSubmit={handleCadastrarPulseira} className="space-y-3 text-xs">
+              {erroModalPulseira && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl flex items-start gap-2 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="leading-snug font-medium text-xs">
+                    {erroModalPulseira}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block font-bold mb-1">Número da Pulseira *</label>
                 <input
@@ -1313,6 +1413,14 @@ export const AdminPage: React.FC = () => {
               <button onClick={() => setModalNovaTenda(false)}><X className="w-5 h-5 text-[#6B7280]" /></button>
             </div>
             <form onSubmit={handleCadastrarTenda} className="space-y-3 text-xs">
+              {erroModalTenda && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl flex items-start gap-2 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div className="leading-snug font-medium text-xs">
+                    {erroModalTenda}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block font-bold mb-1">Nome do Posto *</label>
                 <input
@@ -1335,26 +1443,70 @@ export const AdminPage: React.FC = () => {
                   className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35]"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold mb-1">Latitude</label>
-                  <input
-                    type="text"
-                    value={formTendaLat}
-                    onChange={(e) => setFormTendaLat(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none font-mono"
-                  />
+              {/* Localização & Coordenadas */}
+              <div className="p-3 bg-[#F9F1E7]/50 rounded-2xl border border-[#FF6B35]/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-[#1A1D1F] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#FF6B35]" /> Coordenadas do Posto
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleCapturarGpsDispositivo((lat, lng) => {
+                      setFormTendaLat(lat.toFixed(6));
+                      setFormTendaLng(lng.toFixed(6));
+                    })}
+                    disabled={capturandoGpsTenda}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-lg font-bold text-[10px] transition-colors disabled:opacity-50"
+                  >
+                    <Crosshair className={`w-3 h-3 ${capturandoGpsTenda ? 'animate-spin' : ''}`} />
+                    {capturandoGpsTenda ? 'Obtendo GPS...' : 'Pegar GPS Atual'}
+                  </button>
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-[#6B7280] font-semibold mb-0.5">Latitude</label>
+                    <input
+                      type="text"
+                      value={formTendaLat}
+                      onChange={(e) => setFormTendaLat(e.target.value)}
+                      placeholder="-20.6590"
+                      className="w-full p-2 rounded-xl border border-[#E5E7EB] outline-none font-mono text-xs bg-white focus:border-[#FF6B35]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#6B7280] font-semibold mb-0.5">Longitude</label>
+                    <input
+                      type="text"
+                      value={formTendaLng}
+                      onChange={(e) => setFormTendaLng(e.target.value)}
+                      placeholder="-40.4950"
+                      className="w-full p-2 rounded-xl border border-[#E5E7EB] outline-none font-mono text-xs bg-white focus:border-[#FF6B35]"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block font-bold mb-1">Longitude</label>
-                  <input
-                    type="text"
-                    value={formTendaLng}
-                    onChange={(e) => setFormTendaLng(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none font-mono"
-                  />
+                  <label className="block text-[10px] text-[#6B7280] font-semibold mb-1">Ou selecione um ponto de referência:</label>
+                  <div className="flex flex-wrap gap-1">
+                    {PRESETS_GUARAPARI.map((preset) => (
+                      <button
+                        key={preset.nome}
+                        type="button"
+                        onClick={() => {
+                          setFormTendaPraia(preset.praia);
+                          setFormTendaLat(preset.lat.toFixed(6));
+                          setFormTendaLng(preset.lng.toFixed(6));
+                        }}
+                        className="text-[10px] font-semibold px-2 py-0.5 bg-white hover:bg-[#FF6B35] hover:text-white text-[#1A1D1F] border border-[#E5E7EB] rounded-lg transition-colors"
+                      >
+                        {preset.nome}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+
               <div>
                 <label className="block font-bold mb-1">Coordenador / Responsável</label>
                 <input
@@ -1389,14 +1541,14 @@ export const AdminPage: React.FC = () => {
       {/* MODAL: EDIÇÃO DE TENDA */}
       {modalEdicaoTenda && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
-              <h3 className="text-base font-black text-[#1A1D1F]">Editar Posto</h3>
+              <h3 className="text-base font-black text-[#1A1D1F]">Editar Posto / Tenda</h3>
               <button onClick={() => setModalEdicaoTenda(null)}><X className="w-5 h-5 text-[#6B7280]" /></button>
             </div>
             <form onSubmit={handleSalvarEdicaoTenda} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold mb-1">Nome do Posto</label>
+                <label className="block font-bold mb-1">Nome do Posto *</label>
                 <input
                   type="text"
                   required
@@ -1405,6 +1557,83 @@ export const AdminPage: React.FC = () => {
                   className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35]"
                 />
               </div>
+              <div>
+                <label className="block font-bold mb-1">Praia *</label>
+                <input
+                  type="text"
+                  required
+                  value={modalEdicaoTenda.praia || ''}
+                  onChange={(e) => setModalEdicaoTenda({ ...modalEdicaoTenda, praia: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35]"
+                />
+              </div>
+
+              {/* Seletor de Localização e Coordenadas para Edição */}
+              <div className="p-3 bg-[#F9F1E7]/50 rounded-2xl border border-[#FF6B35]/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-[#1A1D1F] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#FF6B35]" /> Coordenadas do Posto
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleCapturarGpsDispositivo((lat, lng) => {
+                      setModalEdicaoTenda(prev => prev ? { ...prev, latitude: lat, longitude: lng } : null);
+                    })}
+                    disabled={capturandoGpsTenda}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-lg font-bold text-[10px] transition-colors disabled:opacity-50"
+                  >
+                    <Crosshair className={`w-3 h-3 ${capturandoGpsTenda ? 'animate-spin' : ''}`} />
+                    {capturandoGpsTenda ? 'Obtendo GPS...' : 'Pegar GPS Atual'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-[#6B7280] font-semibold mb-0.5">Latitude</label>
+                    <input
+                      type="text"
+                      value={modalEdicaoTenda.latitude ?? ''}
+                      onChange={(e) => setModalEdicaoTenda({ ...modalEdicaoTenda, latitude: parseFloat(e.target.value) || 0 })}
+                      placeholder="-20.6590"
+                      className="w-full p-2 rounded-xl border border-[#E5E7EB] outline-none font-mono text-xs bg-white focus:border-[#FF6B35]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#6B7280] font-semibold mb-0.5">Longitude</label>
+                    <input
+                      type="text"
+                      value={modalEdicaoTenda.longitude ?? ''}
+                      onChange={(e) => setModalEdicaoTenda({ ...modalEdicaoTenda, longitude: parseFloat(e.target.value) || 0 })}
+                      placeholder="-40.4950"
+                      className="w-full p-2 rounded-xl border border-[#E5E7EB] outline-none font-mono text-xs bg-white focus:border-[#FF6B35]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#6B7280] font-semibold mb-1">Ou selecione um ponto de referência:</label>
+                  <div className="flex flex-wrap gap-1">
+                    {PRESETS_GUARAPARI.map((preset) => (
+                      <button
+                        key={preset.nome}
+                        type="button"
+                        onClick={() => {
+                          setModalEdicaoTenda({
+                            ...modalEdicaoTenda,
+                            praia: preset.praia,
+                            latitude: preset.lat,
+                            longitude: preset.lng,
+                          });
+                        }}
+                        className="text-[10px] font-semibold px-2 py-0.5 bg-white hover:bg-[#FF6B35] hover:text-white text-[#1A1D1F] border border-[#E5E7EB] rounded-lg transition-colors"
+                      >
+                        {preset.nome}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold mb-1">Coordenador</label>
                 <input
@@ -1437,7 +1666,7 @@ export const AdminPage: React.FC = () => {
                 type="submit"
                 className="w-full py-3 bg-[#0B6EFD] hover:bg-[#0857CC] text-white font-bold rounded-xl shadow transition-colors"
               >
-                Salvar Posto
+                Salvar Alterações do Posto
               </button>
             </form>
           </div>

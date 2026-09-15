@@ -13,7 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
-import { Tenda } from '../types';
+import { Tenda, traduzirErroSupabase } from '../types';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -76,7 +76,7 @@ export const LoginPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setErro(err.message || 'Erro ao processar autenticação no Supabase.');
+      setErro(traduzirErroSupabase(err));
     } finally {
       setLoading(false);
     }
@@ -112,27 +112,27 @@ export const LoginPage: React.FC = () => {
       </header>
 
       {/* Card Central de Login / Cadastro */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#E5E7EB] overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-[#E5E7EB] overflow-hidden">
           
           {/* Header do Card (Areia Clara #F9F1E7) */}
-          <div className="bg-[#F9F1E7] p-6 text-center border-b border-[#E5E7EB]">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm border border-[#E5E7EB]">
-              <ShieldCheck className="w-7 h-7 text-[#FF6B35]" />
+          <div className="bg-[#F9F1E7] p-4 sm:p-6 text-center border-b border-[#E5E7EB]">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-sm border border-[#E5E7EB]">
+              <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF6B35]" />
             </div>
-            <h1 className="text-xl font-black text-[#1A1D1F] tracking-tight">
+            <h1 className="text-lg sm:text-xl font-black text-[#1A1D1F] tracking-tight">
               Central Operacional da Tenda
             </h1>
-            <p className="text-xs text-[#6B7280] mt-1">
+            <p className="text-[11px] sm:text-xs text-[#6B7280] mt-0.5 sm:mt-1">
               Acesso exclusivo para voluntários e socorristas institucionais
             </p>
 
             {/* Alternador Entrar vs Novo Operador */}
-            <div className="flex bg-white/80 p-1 rounded-xl border border-[#E5E7EB] mt-5 max-w-xs mx-auto">
+            <div className="flex bg-white/80 p-1 rounded-xl border border-[#E5E7EB] mt-3.5 sm:mt-5 max-w-xs mx-auto">
               <button
                 type="button"
                 onClick={() => { setTab('login'); setErro(null); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-1 sm:py-1.5 text-xs font-bold rounded-lg transition-all ${
                   tab === 'login'
                     ? 'bg-[#FF6B35] text-white shadow'
                     : 'text-[#6B7280] hover:text-[#1A1D1F]'
@@ -143,7 +143,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setTab('cadastro'); setErro(null); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-1 sm:py-1.5 text-xs font-bold rounded-lg transition-all ${
                   tab === 'cadastro'
                     ? 'bg-[#FF6B35] text-white shadow'
                     : 'text-[#6B7280] hover:text-[#1A1D1F]'
@@ -155,7 +155,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
             
             {erro && (
               <div className="bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] text-xs p-3 rounded-xl flex items-start gap-2">

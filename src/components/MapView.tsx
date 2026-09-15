@@ -156,13 +156,13 @@ export const MapView: React.FC<MapViewProps> = ({
               href="${googleMapsUrl}" 
               target="_blank" 
               rel="noopener noreferrer"
-              class="inline-flex items-center justify-center w-full gap-1.5 bg-[#FF6B35] hover:bg-[#E8531F] text-white text-xs font-semibold py-2 px-3 rounded-lg shadow transition-colors"
+              style="display: flex; align-items: center; justify-content: center; width: 100%; gap: 6px; background-color: #FF6B35; color: #FFFFFF !important; font-size: 12px; font-weight: 700; padding: 9px 12px; border-radius: 10px; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; margin-top: 6px;"
             >
-              <Navigation class="w-3.5 h-3.5" />
-              Traçar Rota no Google Maps
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              <span>Traçar Rota no Google Maps</span>
             </a>
           </div>
-        `);
+        `, { maxWidth: 300, minWidth: 240 });
 
       marker.on('click', () => {
         onSelectOcorrencia?.(oco);
@@ -180,7 +180,7 @@ export const MapView: React.FC<MapViewProps> = ({
   }, [ocorrencias, tendas, selectedOcorrencia, onSelectOcorrencia]);
 
   return (
-    <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden border border-[#E5E7EB] shadow-sm">
+    <div className="relative w-full h-full min-h-[400px] flex-1 rounded-2xl overflow-hidden border border-[#E5E7EB] shadow-sm">
       <div ref={mapContainerRef} className="w-full h-full min-h-[400px]" />
       
       {/* Legenda Operacional */}

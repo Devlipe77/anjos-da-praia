@@ -12,6 +12,7 @@ import {
   LifeBuoy
 } from 'lucide-react';
 import { dataService } from '../lib/supabase';
+import { traduzirErroSupabase } from '../types';
 import confetti from 'canvas-confetti';
 
 export const AlertPage: React.FC = () => {
@@ -60,7 +61,7 @@ export const AlertPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setErro(err.message || 'Erro ao enviar o chamado. Tente novamente.');
+      setErro(traduzirErroSupabase(err));
     } finally {
       setLoading(false);
     }
@@ -113,12 +114,12 @@ export const AlertPage: React.FC = () => {
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col justify-between">
       
       {/* Topo Limpo */}
-      <header className="p-4 flex items-center justify-between max-w-md mx-auto w-full">
+      <header className="p-3 sm:p-4 flex items-center justify-between max-w-md mx-auto w-full">
         <Link 
           to="/login"
-          className="inline-flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1D1F] font-semibold py-1.5 px-3 rounded-lg hover:bg-slate-100 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#1A1D1F] font-semibold py-1 px-2.5 rounded-lg hover:bg-slate-100 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           <span>Acesso Operacional</span>
         </Link>
 
@@ -128,30 +129,30 @@ export const AlertPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Card Central Limpo e de Alto Impacto */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-[#E5E7EB] overflow-hidden">
+      {/* Card Central Compacto e de Alto Impacto */}
+      <main className="flex-1 flex items-center justify-center p-2.5 sm:p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-[#E5E7EB] overflow-hidden">
           
           {/* Header do Card (Areia Clara #F9F1E7) */}
-          <div className="bg-[#F9F1E7] p-6 text-center border-b border-[#E5E7EB]">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm border border-[#E5E7EB]">
-              <ShieldAlert className="w-8 h-8 text-[#FF6B35]" />
+          <div className="bg-[#F9F1E7] p-4 sm:p-6 text-center border-b border-[#E5E7EB]">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-sm border border-[#E5E7EB]">
+              <ShieldAlert className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF6B35]" />
             </div>
-            <h1 className="text-2xl font-black text-[#1A1D1F] tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-[#1A1D1F] tracking-tight leading-snug">
               Criança Perdida na Praia?
             </h1>
-            <p className="text-xs font-semibold text-[#6B7280] mt-1">
+            <p className="text-[11px] sm:text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
               Acione a equipe de socorristas da tenda em 1 clique
             </p>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {!sucesso ? (
-              <div className="space-y-5">
+              <div className="space-y-3.5 sm:space-y-5">
                 
-                <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-2xl p-4 text-xs text-[#1D4ED8] flex items-start gap-3">
-                  <Heart className="w-5 h-5 text-[#0B6EFD] flex-shrink-0 mt-0.5" />
-                  <div className="leading-relaxed">
+                <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl sm:rounded-2xl p-3 sm:p-4 text-xs text-[#1D4ED8] flex items-start gap-2.5">
+                  <Heart className="w-4 h-4 text-[#0B6EFD] flex-shrink-0 mt-0.5" />
+                  <div className="leading-relaxed text-[11px] sm:text-xs">
                     <strong className="block text-[#1E3A8A] font-bold mb-0.5">Mantenha a calma!</strong>
                     Nossos voluntários estão a postos na orla. Fique com a criança no local visível enquanto enviamos as coordenadas.
                   </div>
@@ -159,7 +160,7 @@ export const AlertPage: React.FC = () => {
 
                 {/* Número da Pulseira */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-[#1A1D1F] mb-1.5 text-center">
+                  <label className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-[#1A1D1F] mb-1 text-center">
                     Número na Pulseira da Criança:
                   </label>
                   <div className="relative">
@@ -169,10 +170,10 @@ export const AlertPage: React.FC = () => {
                       placeholder="Ex: 1001"
                       value={numeroPulseira}
                       onChange={(e) => setNumeroPulseira(e.target.value)}
-                      className="w-full text-center text-4xl tracking-widest font-black py-3 px-4 rounded-2xl border-2 border-[#E5E7EB] focus:border-[#FF6B35] focus:ring-4 focus:ring-[#FF6B35]/20 outline-none transition-all placeholder:text-slate-300 text-[#1A1D1F]"
+                      className="w-full text-center text-3xl sm:text-4xl tracking-widest font-black py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl border-2 border-[#E5E7EB] focus:border-[#FF6B35] focus:ring-4 focus:ring-[#FF6B35]/20 outline-none transition-all placeholder:text-slate-300 text-[#1A1D1F]"
                     />
                     {pulseiraUrl && (
-                      <span className="absolute right-3 top-4 text-[10px] bg-[#DCFCE7] text-[#15803D] font-bold px-2 py-0.5 rounded-md border border-[#BBF7D0]">
+                      <span className="absolute right-2.5 top-3 text-[9px] sm:text-[10px] bg-[#DCFCE7] text-[#15803D] font-bold px-1.5 py-0.5 rounded border border-[#BBF7D0]">
                         Via QR Code
                       </span>
                     )}
@@ -181,10 +182,10 @@ export const AlertPage: React.FC = () => {
 
                 {/* Erro e Fallback */}
                 {erro && (
-                  <div className="bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] text-xs p-3.5 rounded-xl space-y-2">
+                  <div className="bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] text-xs p-3 rounded-xl space-y-2">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>{erro}</span>
+                      <span className="leading-snug">{erro}</span>
                     </div>
                     <button
                       type="button"
@@ -201,7 +202,7 @@ export const AlertPage: React.FC = () => {
                   type="button"
                   disabled={loading || !numeroPulseira.trim()}
                   onClick={handleCapturarGPS}
-                  className={`w-full py-4 px-6 rounded-2xl font-black text-lg text-white shadow-xl transition-all flex items-center justify-center gap-3 ${
+                  className={`w-full py-3.5 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl font-black text-base sm:text-lg text-white shadow-lg transition-all flex items-center justify-center gap-2.5 ${
                     loading || !numeroPulseira.trim()
                       ? 'bg-slate-300 cursor-not-allowed'
                       : 'bg-[#FF6B35] hover:bg-[#E8531F] active:scale-[0.98] alert-pulse'
@@ -209,21 +210,21 @@ export const AlertPage: React.FC = () => {
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Capturando GPS e Enviando...</span>
                     </>
                   ) : (
                     <>
-                      <MapPin className="w-6 h-6" />
+                      <MapPin className="w-5 h-5 sm:w-6 sm:h-6" />
                       <span>ENVIAR LOCALIZAÇÃO AGORA</span>
                     </>
                   )}
                 </button>
 
                 {/* Mensagem Institucional de Parceiro (Item 7 do Edital) */}
-                <div className="pt-3 border-t border-[#E5E7EB] text-center">
-                  <p className="text-[11px] text-[#6B7280] flex items-center justify-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#FF6B35]" />
+                <div className="pt-2 border-t border-[#E5E7EB] text-center">
+                  <p className="text-[10px] sm:text-[11px] text-[#6B7280] flex items-center justify-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#FF6B35]" />
                     <span>Apoio: Prefeitura de Guarapari & Corpo de Bombeiros Militar ES</span>
                   </p>
                 </div>
