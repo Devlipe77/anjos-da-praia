@@ -174,7 +174,13 @@ export const AlertPage: React.FC = () => {
         </Link>
 
         <div className="flex items-center gap-1.5 text-xs font-bold text-[#1A1D1F]">
-          <LifeBuoy className="w-4 h-4 text-[#FF6B35]" />
+          <div className="w-5 h-5 rounded-md bg-[#FF6B35] flex items-center justify-center p-0.5 shadow-sm">
+            <img 
+              src="https://agpynfhvmyaiupynrznx.supabase.co/storage/v1/object/public/padrao/wings.png" 
+              alt="Anjos da Praia Logo" 
+              className="w-full h-full object-contain filter brightness-0 invert"
+            />
+          </div>
           <span>Anjos da Praia</span>
         </div>
       </header>

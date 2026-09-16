@@ -88,8 +88,15 @@ export const LoginPage: React.FC = () => {
       <header className="bg-white border-b border-[#E5E7EB] py-4 px-6 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FF6B35] text-white flex items-center justify-center shadow-md">
-              <LifeBuoy className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-[#FF6B35] flex items-center justify-center shadow-md p-1.5 overflow-hidden">
+              <img 
+                src="https://agpynfhvmyaiupynrznx.supabase.co/storage/v1/object/public/padrao/wings.png" 
+                alt="Anjos da Praia Logo" 
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+                className="w-full h-full object-contain filter brightness-0 invert" 
+              />
             </div>
             <div>
               <div className="font-extrabold text-base tracking-tight text-[#1A1D1F] leading-none">
