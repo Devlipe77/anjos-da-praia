@@ -11,22 +11,38 @@ import {
   Sparkles,
   LifeBuoy,
   Wifi,
-  WifiOff
+  WifiOff,
+  Camera
 } from 'lucide-react';
 import { dataService } from '../lib/supabase';
 import { traduzirErroSupabase } from '../types';
+import { QRScannerModal } from '../components/QRCodeModal';
 import confetti from 'canvas-confetti';
 
 export const AlertPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const pulseiraUrl = searchParams.get('pulseira') || '';
-
   const [numeroPulseira, setNumeroPulseira] = useState(pulseiraUrl);
   const [loading, setLoading] = useState(false);
   const [tentativaReenvio, setTentativaReenvio] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [coordenadasEnviadas, setCoordenadasEnviadas] = useState<{ lat: number; lng: number } | null>(null);
+  const [scannerModalOpen, setScannerModalOpen] = useState(false);
+
+  const extrairNumeroPulseira = (texto: string) => {
+    try {
+      if (texto.includes('pulseira=')) {
+        const url = new URL(texto);
+        const p = url.searchParams.get('pulseira');
+        if (p) return p.trim();
+      }
+    } catch {
+      // Se não for uma URL válida, trata como texto direto
+    }
+    const match = texto.match(/\d+/);
+    return match ? match[0] : texto.trim();
+  };
 
   // Monitorar se a rede do dispositivo está ativa
   const [online, setOnline] = useState(navigator.onLine);
@@ -194,9 +210,20 @@ export const AlertPage: React.FC = () => {
 
                 {/* Número da Pulseira */}
                 <div>
-                  <label className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-[#1A1D1F] mb-1 text-center">
-                    Número na Pulseira da Criança:
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-[#1A1D1F]">
+                      Número na Pulseira:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setScannerModalOpen(true)}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF6B35] hover:text-[#E8531F] py-0.5 px-2 rounded-lg bg-[#FF6B35]/10 hover:bg-[#FF6B35]/20 transition-colors"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Escanear Câmera</span>
+                    </button>
+                  </div>
+
                   <div className="relative">
                     <input
                       type="text"
@@ -326,6 +353,16 @@ export const AlertPage: React.FC = () => {
       <footer className="py-3 text-center text-[11px] text-[#6B7280]">
         Associação Anjos da Praia • Guarapari - ES
       </footer>
+
+      {/* Modal Leitor de QR Code pela Câmera */}
+      <QRScannerModal
+        isOpen={scannerModalOpen}
+        onClose={() => setScannerModalOpen(false)}
+        onScanSuccess={(textoDecodificado) => {
+          const num = extrairNumeroPulseira(textoDecodificado);
+          setNumeroPulseira(num);
+        }}
+      />
     </div>
   );
 };

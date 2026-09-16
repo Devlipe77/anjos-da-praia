@@ -29,13 +29,17 @@ import {
   Flame,
   Crosshair,
   FileSpreadsheet,
-  FileDown
+  FileDown,
+  Camera,
+  BellRing,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
 import { MapView } from '../components/MapView';
 import { StatusBadge } from '../components/StatusBadge';
-import { QRCodeModal } from '../components/QRCodeModal';
+import { QRCodeModal, QRScannerModal } from '../components/QRCodeModal';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 
@@ -147,22 +151,54 @@ export const AdminPage: React.FC = () => {
     );
   };
 
-  // Bip sonoro suave via Web Audio API para novos alertas
+  // Som de Alerta & Notificações Nativas
+  const [somAtivado, setSomAtivado] = useState(true);
+  const [scannerAdminAberto, setScannerAdminAberto] = useState(false);
+
+  // Solicitar permissão para Notificações Web nativas no carregamento
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Disparo de sirene/alerta sonoro tático para novos chamados
   const tocarBipAlerta = () => {
+    if (!somAtivado) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Nota Lá
-      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.4);
-    } catch {
-      // Silencioso se bloqueado pelo browser
+      
+      // Bip duplo de atenção
+      const playTone = (freq: number, delay: number, dur: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + delay + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + dur);
+      };
+
+      playTone(880, 0, 0.2);
+      playTone(1174, 0.25, 0.3); // Nota Ré aguda (alerta CBMES)
+    } catch (e) {
+      console.warn('Audio não suportado ou bloqueado pelo navegador.');
+    }
+  };
+
+  const dispararNotificacaoPush = (titulo: string, corpo: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(titulo, {
+          body: corpo,
+          icon: '/favicon.ico',
+        });
+      } catch (e) {
+        console.warn('Falha ao exibir notificação nativa:', e);
+      }
     }
   };
 
@@ -177,6 +213,11 @@ export const AdminPage: React.FC = () => {
 
       if (tocarSom && ocos.length > ocorrencias.length) {
         tocarBipAlerta();
+        const nova = ocos[0];
+        dispararNotificacaoPush(
+          '🚨 NOVO ALERTA - Criança Localizada!',
+          `Pulseira #${nova.numero_pulseira} acionada na praia. Abra a central operacional.`
+        );
       }
 
       setOcorrencias(ocos);
@@ -639,7 +680,30 @@ export const AdminPage: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Botão de Scanner de Câmera no Admin */}
+            <button
+              onClick={() => setScannerAdminAberto(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#1A1D1F] border border-[#E5E7EB] rounded-xl text-xs font-bold transition-colors"
+              title="Ler QR Code da pulseira pela câmera do dispositivo"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#FF6B35]" />
+              <span className="hidden md:inline">Ler Pulseira</span>
+            </button>
+
+            {/* Alternador de Sirene / Som de Alerta */}
+            <button
+              onClick={() => setSomAtivado(!somAtivado)}
+              className={`p-2 rounded-xl border transition-colors ${
+                somAtivado 
+                  ? 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]' 
+                  : 'bg-slate-100 text-[#6B7280] border-[#E5E7EB]'
+              }`}
+              title={somAtivado ? 'Alerta sonoro ativado' : 'Alerta sonoro mudo'}
+            >
+              {somAtivado ? <Volume2 className="w-4 h-4 text-[#FF6B35]" /> : <VolumeX className="w-4 h-4 text-[#6B7280]" />}
+            </button>
+
             <button
               onClick={exportarRelatorioCSV}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
@@ -1930,6 +1994,27 @@ export const AdminPage: React.FC = () => {
         onClose={() => setQrModalOpen(false)}
         numeroPulseira={qrNumero}
         nomeCrianca={qrCrianca}
+      />
+
+      {/* Modal Scanner de Câmera no Painel do Operador */}
+      <QRScannerModal
+        isOpen={scannerAdminAberto}
+        onClose={() => setScannerAdminAberto(false)}
+        onScanSuccess={(texto) => {
+          let num = texto;
+          try {
+            if (texto.includes('pulseira=')) {
+              const url = new URL(texto);
+              const p = url.searchParams.get('pulseira');
+              if (p) num = p;
+            }
+          } catch {}
+          const match = num.match(/\d+/);
+          const finalNum = match ? match[0] : num.trim();
+          setTermoBuscaPulseira(finalNum);
+          setSecaoAtiva('pulseiras');
+          showToast(`Pulseira #${finalNum} escaneada com sucesso!`, 'sucesso');
+        }}
       />
 
     </div>

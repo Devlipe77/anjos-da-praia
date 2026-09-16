@@ -61,9 +61,27 @@ export const MapView: React.FC<MapViewProps> = ({
     layer.clearLayers();
     const bounds: L.LatLngExpression[] = [];
 
-    // 1. Plotar Tendas / Postos de Apoio
+    // 1. Plotar Tendas / Postos de Apoio com Raio Geodésico de Cobertura Visual
     tendas.forEach((tenda) => {
       const isAtiva = tenda.ativa !== false;
+
+      // Raio de Cobertura Visual de 350m (Buffer Geodésico Operacional da Tenda)
+      if (isAtiva) {
+        const circle = L.circle([tenda.latitude, tenda.longitude], {
+          radius: 350,
+          color: '#0B6EFD',
+          fillColor: '#0B6EFD',
+          fillOpacity: 0.08,
+          weight: 1.5,
+          dashArray: '4, 6',
+        }).bindTooltip(`Zona de Cobertura Visual: ${tenda.nome} (350m)`, {
+          sticky: true,
+          direction: 'top',
+          className: 'text-xs font-bold'
+        });
+        layer.addLayer(circle);
+      }
+
       const tendaIcon = L.divIcon({
         className: 'custom-tenda-pin',
         html: `
@@ -83,6 +101,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </span>
             <div class="font-bold text-[#1A1D1F] text-sm leading-tight">${tenda.nome}</div>
             <div class="text-xs text-[#6B7280] mt-1">${tenda.praia}</div>
+            <div class="text-[11px] text-[#0B6EFD] font-semibold mt-1">Raio de Patrulha: 350m</div>
             ${tenda.responsavel_posto ? `<div class="text-xs text-[#1A1D1F] mt-1"><strong>Resp:</strong> ${tenda.responsavel_posto}</div>` : ''}
             ${tenda.telefone_posto ? `<div class="text-xs text-[#0B6EFD] font-mono mt-0.5">${tenda.telefone_posto}</div>` : ''}
           </div>
@@ -191,6 +210,10 @@ export const MapView: React.FC<MapViewProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-md bg-[#0B6EFD]"></span>
           <span className="text-[11px]">Tenda / Posto de Apoio</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full border border-dashed border-[#0B6EFD] bg-[#0B6EFD]/20"></span>
+          <span className="text-[11px]">Raio de Patrulha (350m)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF6B35]"></span>
