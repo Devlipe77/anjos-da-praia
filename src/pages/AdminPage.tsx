@@ -722,31 +722,32 @@ export const AdminPage: React.FC = () => {
       <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         
         {/* Topbar Superior */}
-        <header className="h-16 bg-white border-b border-[#E5E7EB] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center gap-3">
+        <header className="min-h-16 py-2.5 bg-white border-b border-[#E5E7EB] px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <button
               onClick={() => setSidebarAberta(true)}
-              className="lg:hidden p-2 rounded-xl text-[#6B7280] hover:bg-slate-100"
+              className="lg:hidden p-2 rounded-xl text-[#6B7280] hover:bg-slate-100 flex-shrink-0"
+              aria-label="Abrir menu"
             >
               <Menu className="w-5 h-5" />
             </button>
 
-            <h1 className="text-base sm:text-lg font-black text-[#1A1D1F] tracking-tight capitalize">
+            <h1 className="text-xs sm:text-base md:text-lg font-black text-[#1A1D1F] tracking-tight truncate">
               {secaoAtiva === 'dashboard' && 'Visão Geral da Operação'}
-              {secaoAtiva === 'monitoramento' && 'Central Tática de Monitoramento'}
+              {secaoAtiva === 'monitoramento' && 'Central de Monitoramento'}
               {secaoAtiva === 'pulseiras' && 'Gerenciamento de Pulseiras'}
-              {secaoAtiva === 'tendas' && 'Postos de Atendimento na Orla'}
-              {secaoAtiva === 'impressao' && 'Emissão e Impressão de Pulseiras'}
-              {secaoAtiva === 'relatorios' && 'Relatórios e Indicadores por Praia'}
+              {secaoAtiva === 'tendas' && 'Postos de Atendimento'}
+              {secaoAtiva === 'impressao' && 'Emissão de Pulseiras'}
+              {secaoAtiva === 'relatorios' && 'Relatórios e Indicadores'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
             {/* Botão de Instalar Aplicativo (PWA) */}
             {!appJaInstalado && (
               <button
                 onClick={handleInstalarPWA}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF4EE] hover:bg-[#FFE8DC] text-[#FF6B35] border border-[#FFD8C2] rounded-xl text-xs font-bold transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#FFF4EE] hover:bg-[#FFE8DC] text-[#FF6B35] border border-[#FFD8C2] rounded-xl text-xs font-bold transition-colors shadow-sm"
                 title="Instalar Anjos da Praia como aplicativo no computador ou celular"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -757,14 +758,30 @@ export const AdminPage: React.FC = () => {
             {/* Botão de Scanner de Câmera no Admin */}
             <button
               onClick={() => setScannerAdminAberto(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#1A1D1F] border border-[#E5E7EB] rounded-xl text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-[#1A1D1F] border border-[#E5E7EB] rounded-xl text-xs font-bold transition-colors"
               title="Ler QR Code da pulseira pela câmera do dispositivo"
             >
               <Camera className="w-3.5 h-3.5 text-[#FF6B35]" />
               <span className="hidden md:inline">Ler Pulseira</span>
             </button>
 
-            {/* Alternador de Sirene / Som de Alerta */}
+            {/* Exportar CSV */}
+            <button
+              onClick={exportarRelatorioCSV}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+              title="Exportar dados consolidados em planilha CSV"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
+
+            {/* Status do Supabase Realtime */}
+            <span className="hidden md:inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#15803D] text-[11px] font-bold px-2.5 py-1 rounded-full border border-[#BBF7D0]">
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-ping"></span>
+              <span>Supabase Realtime Ativo</span>
+            </span>
+
+            {/* Alternador de Sirene / Som de Alerta (ao lado do status e sincronizar) */}
             <button
               onClick={() => setSomAtivado(!somAtivado)}
               className={`p-2 rounded-xl border transition-colors ${
@@ -777,19 +794,7 @@ export const AdminPage: React.FC = () => {
               {somAtivado ? <Volume2 className="w-4 h-4 text-[#FF6B35]" /> : <VolumeX className="w-4 h-4 text-[#6B7280]" />}
             </button>
 
-            <button
-              onClick={exportarRelatorioCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
-              title="Exportar dados consolidados em planilha CSV"
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Exportar CSV</span>
-            </button>
-            <span className="hidden md:inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#15803D] text-[11px] font-bold px-2.5 py-1 rounded-full border border-[#BBF7D0]">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-ping"></span>
-              <span>Supabase Realtime Ativo</span>
-            </span>
-
+            {/* Sincronizar dados */}
             <button
               onClick={() => carregarDados()}
               className="p-2 rounded-xl text-[#6B7280] hover:bg-slate-100 border border-[#E5E7EB] transition-colors"
@@ -1360,58 +1365,62 @@ export const AdminPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-1.5 text-xs">
                     <label className="font-bold">Início #:</label>
                     <input
                       type="number"
                       value={loteInicio}
                       onChange={(e) => setLoteInicio(parseInt(e.target.value) || 1001)}
-                      className="w-20 p-1.5 border border-[#E5E7EB] rounded-lg text-center font-mono font-bold"
+                      className="w-16 sm:w-20 p-1.5 border border-[#E5E7EB] rounded-lg text-center font-mono font-bold"
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-xs">
                     <label className="font-bold">Qtd:</label>
                     <select
                       value={loteQuantidade}
                       onChange={(e) => setLoteQuantidade(parseInt(e.target.value))}
-                      className="p-1.5 border border-[#E5E7EB] rounded-lg bg-white font-bold"
+                      className="p-1.5 border border-[#E5E7EB] rounded-lg bg-white font-bold text-xs"
                     >
-                      <option value={6}>6 pulseiras</option>
-                      <option value={12}>12 pulseiras</option>
-                      <option value={24}>24 pulseiras</option>
+                      <option value={6}>6 un</option>
+                      <option value={12}>12 un</option>
+                      <option value={24}>24 un</option>
                     </select>
                   </div>
 
                   <button
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-1.5 bg-[#FF6B35] hover:bg-[#E8531F] text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition-colors"
+                    className="inline-flex items-center gap-1.5 bg-[#FF6B35] hover:bg-[#E8531F] text-white text-xs font-bold px-3 sm:px-4 py-2 rounded-xl shadow transition-colors"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>Imprimir Folha</span>
+                    <span className="hidden xs:inline">Imprimir</span>
                   </button>
                 </div>
               </div>
 
-              {/* Grade de Impressão */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
+              {/* Grade de Impressão Responsiva */}
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
                 {Array.from({ length: loteQuantidade }).map((_, i) => {
                   const num = String(loteInicio + i);
                   const qrUrl = `${window.location.origin}/alerta?pulseira=${num}`;
 
                   return (
-                    <div key={num} className="bg-white p-3 rounded-2xl border-2 border-dashed border-[#E5E7EB] text-center space-y-2">
+                    <div key={num} className="bg-white p-3 rounded-2xl border-2 border-dashed border-[#E5E7EB] text-center space-y-2 flex flex-col items-center justify-center overflow-hidden">
                       <div className="text-[10px] font-black uppercase tracking-wider text-[#FF6B35]">
                         ANJOS DA PRAIA
                       </div>
-                      <div className="inline-block p-2 bg-white rounded-xl shadow-inner border border-[#E5E7EB]">
-                        <QRCodeSVG value={qrUrl} size={110} level="M" />
+                      <div className="p-2 bg-white rounded-xl shadow-inner border border-[#E5E7EB] flex items-center justify-center max-w-full">
+                        <QRCodeSVG 
+                          value={qrUrl} 
+                          className="w-24 h-24 sm:w-28 sm:h-28 max-w-full"
+                          level="M" 
+                        />
                       </div>
                       <div className="text-base font-black font-mono text-[#1A1D1F]">
                         #{num}
                       </div>
-                      <div className="text-[9px] text-[#6B7280]">
+                      <div className="text-[9px] text-[#6B7280] leading-tight max-w-[180px]">
                         Aponte a câmera em caso de emergência
                       </div>
                     </div>
