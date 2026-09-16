@@ -418,5 +418,31 @@ export const dataService = {
   async obterUsuarioAtual(): Promise<User | null> {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.user || null;
+  },
+
+  async obterOperador(userId: string): Promise<Operador | null> {
+    try {
+      const { data, error } = await supabase
+        .from('operadores')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      if (error) {
+        console.warn('Erro ao obter operador:', error.message);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.warn('Exceção ao obter operador:', err);
+      return null;
+    }
+  },
+
+  async atualizarTendaOperador(userId: string, tendaId: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('operadores')
+      .update({ tenda_id: tendaId })
+      .eq('id', userId);
+    if (error) throw error;
   }
 };

@@ -63,8 +63,10 @@ export const AdminPage: React.FC = () => {
   const [selectedOcorrencia, setSelectedOcorrencia] = useState<Ocorrencia | null>(null);
 
   // Operador atual logado
+  const [operadorUserId, setOperadorUserId] = useState<string | null>(null);
   const [operadorEmail, setOperadorEmail] = useState<string>('operador@anjosdapraia.org');
   const [operadorNome, setOperadorNome] = useState<string>('Operador Central');
+  const [operadorTendaId, setOperadorTendaId] = useState<string | null>(null);
   const [tendaOperador, setTendaOperador] = useState<string>('Posto Praia do Morro');
 
   // Filtros de busca
@@ -334,6 +336,12 @@ export const AdminPage: React.FC = () => {
       setCadastros(cads);
       setTendas(tens);
 
+      // Reconciliar o nome da tenda do operador caso já tenhamos o tenda_id
+      if (operadorTendaId) {
+        const found = tens.find(t => t.id === operadorTendaId);
+        if (found) setTendaOperador(found.nome);
+      }
+
       if (ocos.length > 0 && !selectedOcorrencia) {
         setSelectedOcorrencia(ocos[0]);
       }
@@ -345,12 +353,28 @@ export const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Buscar sessão do operador
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Buscar sessão do operador e dados na tabela operadores
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        setOperadorUserId(session.user.id);
         setOperadorEmail(session.user.email || 'operador@anjosdapraia.org');
         const metaNome = session.user.user_metadata?.nome;
         if (metaNome) setOperadorNome(metaNome);
+
+        // Buscar dados do operador no Supabase
+        const op = await dataService.obterOperador(session.user.id);
+        if (op) {
+          if (op.nome) setOperadorNome(op.nome);
+          if (op.tenda_id) {
+            setOperadorTendaId(op.tenda_id);
+            // Se já carregou tendas, encontra o nome
+            const todasTendas = await dataService.listarTendas();
+            const tendaAssociada = todasTendas.find(t => t.id === op.tenda_id);
+            if (tendaAssociada) {
+              setTendaOperador(tendaAssociada.nome);
+            }
+          }
+        }
       }
     });
 
@@ -1432,13 +1456,33 @@ export const AdminPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]">
-                      <button
-                        onClick={() => setTendaOperador(t.nome)}
-                        className="text-xs font-bold text-[#0B6EFD] hover:underline flex items-center gap-1"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Definir como minha tenda</span>
-                      </button>
+                      {operadorTendaId === t.id || tendaOperador === t.nome ? (
+                        <span className="text-xs font-bold text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded-lg flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>Sua tenda atual</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            try {
+                              setTendaOperador(t.nome);
+                              if (t.id) setOperadorTendaId(t.id);
+
+                              if (operadorUserId && t.id) {
+                                await dataService.atualizarTendaOperador(operadorUserId, t.id);
+                              }
+                              showToast(`Posto "${t.nome}" definido como sua base de operação!`, 'sucesso');
+                            } catch (err: any) {
+                              console.error('Erro ao atualizar tenda do operador:', err);
+                              showToast('Erro ao salvar tenda no banco de dados: ' + (err.message || 'Erro desconhecido'), 'erro');
+                            }
+                          }}
+                          className="text-xs font-bold text-[#0B6EFD] hover:underline flex items-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Definir como minha tenda</span>
+                        </button>
+                      )}
 
                       <div className="flex items-center gap-1">
                         <button
