@@ -33,7 +33,10 @@ import {
   Camera,
   BellRing,
   Volume2,
-  VolumeX
+  VolumeX,
+  Download,
+  Smartphone,
+  Laptop
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
@@ -154,6 +157,57 @@ export const AdminPage: React.FC = () => {
   // Som de Alerta & Notificações Nativas
   const [somAtivado, setSomAtivado] = useState(true);
   const [scannerAdminAberto, setScannerAdminAberto] = useState(false);
+
+  // Suporte à Instalação PWA (Desktop e Mobile)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [pwaInstalavel, setPwaInstalavel] = useState(false);
+  const [appJaInstalado, setAppJaInstalado] = useState(false);
+
+  useEffect(() => {
+    // Detectar se já está em modo standalone
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isStandalone) {
+      setAppJaInstalado(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setPwaInstalavel(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    window.addEventListener('appinstalled', () => {
+      setPwaInstalavel(false);
+      setDeferredPrompt(null);
+      setAppJaInstalado(true);
+      showToast('Aplicativo Anjos da Praia instalado com sucesso!', 'sucesso');
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstalarPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setPwaInstalavel(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Instrução amigável caso o navegador oculte o prompt nativo ou seja iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        alert('Para instalar no iPhone/iPad:\n1. Toque no botão Compartilhar (quadrado com seta para cima)\n2. Role para baixo e selecione "Adicionar à Tela de Início".');
+      } else {
+        alert('Para instalar no Chrome/Edge:\n1. Clique no ícone de computador/instalação no canto superior direito da barra de endereços (ou nos três pontinhos "⋮" > "Instalar Anjos da Praia").');
+      }
+    }
+  };
 
   // Solicitar permissão para Notificações Web nativas no carregamento
   useEffect(() => {
@@ -688,6 +742,18 @@ export const AdminPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Botão de Instalar Aplicativo (PWA) */}
+            {!appJaInstalado && (
+              <button
+                onClick={handleInstalarPWA}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFF4EE] hover:bg-[#FFE8DC] text-[#FF6B35] border border-[#FFD8C2] rounded-xl text-xs font-bold transition-colors shadow-sm"
+                title="Instalar Anjos da Praia como aplicativo no computador ou celular"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Instalar App</span>
+              </button>
+            )}
+
             {/* Botão de Scanner de Câmera no Admin */}
             <button
               onClick={() => setScannerAdminAberto(true)}
