@@ -39,6 +39,12 @@ export interface PulseiraCadastro {
   ativo?: boolean;
 }
 
+export interface ItemHistoricoStatus {
+  status: StatusOcorrencia;
+  data: string;
+  operador: string;
+}
+
 export interface Ocorrencia {
   id?: string;
   numero_pulseira: string;
@@ -51,6 +57,7 @@ export interface Ocorrencia {
   atendido_por?: string | null;
   notas_atendimento?: string | null;
   tenda_atendimento_id?: string | null;
+  historico_status?: ItemHistoricoStatus[] | null;
   // Campos calculados ou populados em runtime
   cadastro?: PulseiraCadastro;
   tendaMaisProxima?: {

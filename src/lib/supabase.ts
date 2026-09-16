@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador } from '../types';
+import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus } from '../types';
 
 const supabaseUrl = 
   import.meta.env.VITE_SUPABASE_URL || 
@@ -204,6 +204,8 @@ export const dataService = {
   }): Promise<Ocorrencia> {
     const numero = dados.numero_pulseira.trim();
 
+    const agora = new Date().toISOString();
+
     const { data, error } = await supabase
       .from('ocorrencias')
       .insert([{
@@ -212,7 +214,14 @@ export const dataService = {
         longitude: dados.longitude,
         precisao_metros: dados.precisao_metros || 0,
         status: 'Criança localizada',
-        horario_alerta: new Date().toISOString(),
+        horario_alerta: agora,
+        historico_status: [
+          {
+            status: 'Criança localizada',
+            data: agora,
+            operador: 'Sistema (QR Code / Banhista)',
+          }
+        ],
       }])
       .select()
       .single();
@@ -256,13 +265,27 @@ export const dataService = {
     novoStatus: StatusOcorrencia,
     atendidoPor?: string,
     notasAtendimento?: string,
-    tendaAtendimentoId?: string
+    tendaAtendimentoId?: string,
+    historicoAtual?: ItemHistoricoStatus[] | null
   ): Promise<void> {
-    const finalizada = novoStatus === 'Reencontro realizado' ? new Date().toISOString() : null;
+    const agora = new Date().toISOString();
+    const finalizada = novoStatus === 'Reencontro realizado' ? agora : null;
+
+    // Construir novo histórico incremental
+    const novoItem: ItemHistoricoStatus = {
+      status: novoStatus,
+      data: agora,
+      operador: atendidoPor || 'Operador Central',
+    };
+
+    const historicoAtualizado: ItemHistoricoStatus[] = Array.isArray(historicoAtual) 
+      ? [...historicoAtual, novoItem] 
+      : [novoItem];
 
     const updatePayload: Record<string, any> = {
       status: novoStatus,
       finalizada_em: finalizada,
+      historico_status: historicoAtualizado,
     };
 
     if (atendidoPor !== undefined) updatePayload.atendido_por = atendidoPor;

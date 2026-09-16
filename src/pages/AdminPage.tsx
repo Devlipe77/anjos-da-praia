@@ -36,7 +36,9 @@ import {
   VolumeX,
   Download,
   Smartphone,
-  Laptop
+  Laptop,
+  ShieldCheck,
+  History
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
@@ -80,6 +82,9 @@ export const AdminPage: React.FC = () => {
 
   // Modal de Exclusão de Ocorrência (Cancelar alarme falso)
   const [modalExclusaoOcorrencia, setModalExclusaoOcorrencia] = useState<Ocorrencia | null>(null);
+
+  // Modal de Linha do Tempo / Histórico de Auditoria da Ocorrência
+  const [modalHistoricoOcorrencia, setModalHistoricoOcorrencia] = useState<Ocorrencia | null>(null);
 
   // Modal QR Code individual
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -398,9 +403,21 @@ export const AdminPage: React.FC = () => {
   };
 
   // Mudar status de ocorrência
-  const handleMudarStatus = async (ocoId: string, novoStatus: StatusOcorrencia) => {
+  const handleMudarStatus = async (ocoId: string, novoStatus: StatusOcorrencia, ocoAtual?: Ocorrencia) => {
+    if (ocoAtual && ocoAtual.status === 'Reencontro realizado') {
+      showToast('Esta ocorrência já foi finalizada e não pode ser alterada.', 'erro');
+      return;
+    }
+
     try {
-      await dataService.atualizarStatusOcorrencia(ocoId, novoStatus, operadorNome);
+      await dataService.atualizarStatusOcorrencia(
+        ocoId, 
+        novoStatus, 
+        operadorNome, 
+        undefined, 
+        undefined, 
+        ocoAtual?.historico_status
+      );
       if (novoStatus === 'Reencontro realizado') {
         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
       }
@@ -1125,32 +1142,54 @@ export const AdminPage: React.FC = () => {
                               <span>Rota GPS</span>
                             </a>
 
-                            {/* Dropdown de Mudança de Status */}
-                            {oco.id && (
-                              <select
-                                value={oco.status}
-                                onChange={(e) => handleMudarStatus(oco.id!, e.target.value as StatusOcorrencia)}
-                                className="text-xs font-bold py-1 px-2 rounded-lg border border-[#E5E7EB] bg-white text-[#1A1D1F] ml-auto outline-none"
-                              >
-                                <option value="Criança localizada">Criança localizada</option>
-                                <option value="Equipe a caminho">Equipe a caminho</option>
-                                <option value="Criança recebida">Criança na tenda</option>
-                                <option value="Responsáveis localizados">Responsáveis localizados</option>
-                                <option value="Reencontro realizado">Reencontro feito 🎉</option>
-                              </select>
-                            )}
-
-                            {/* Cancelar Alarme Falso */}
+                            {/* Botão de Linha do Tempo / Histórico de Auditoria */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setModalExclusaoOcorrencia(oco);
+                                setModalHistoricoOcorrencia(oco);
                               }}
-                              className="p-1.5 text-[#DC2626] hover:bg-red-50 rounded-lg transition-colors"
-                              title="Cancelar alarme falso"
+                              className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-[#1A1D1F] text-xs font-semibold py-1.5 px-2.5 rounded-lg border border-[#E5E7EB] transition-colors"
+                              title="Ver histórico de alterações e operadores"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <History className="w-3.5 h-3.5 text-[#0B6EFD]" />
+                              <span className="hidden xs:inline">Histórico</span>
                             </button>
+
+                            {/* Status: Seletor Operacional ou Selo Bloqueado de Finalizado */}
+                            {oco.id && (
+                              isFinalizado ? (
+                                <div className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[#DCFCE7] text-[#15803D] border border-[#BBF7D0] text-xs font-black ml-auto shadow-sm">
+                                  <ShieldCheck className="w-3.5 h-3.5 text-[#16A34A]" />
+                                  <span>Reencontro Concluído</span>
+                                </div>
+                              ) : (
+                                <select
+                                  value={oco.status}
+                                  onChange={(e) => handleMudarStatus(oco.id!, e.target.value as StatusOcorrencia, oco)}
+                                  className="text-xs font-bold py-1 px-2 rounded-lg border border-[#E5E7EB] bg-white text-[#1A1D1F] ml-auto outline-none focus:border-[#FF6B35]"
+                                >
+                                  <option value="Criança localizada">Criança localizada</option>
+                                  <option value="Equipe a caminho">Equipe a caminho</option>
+                                  <option value="Criança recebida">Criança na tenda</option>
+                                  <option value="Responsáveis localizados">Responsáveis localizados</option>
+                                  <option value="Reencontro realizado">Reencontro feito 🎉</option>
+                                </select>
+                              )
+                            )}
+
+                            {/* Cancelar Alarme Falso (bloqueado se já finalizado) */}
+                            {!isFinalizado && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setModalExclusaoOcorrencia(oco);
+                                }}
+                                className="p-1.5 text-[#DC2626] hover:bg-red-50 rounded-lg transition-colors"
+                                title="Cancelar alarme falso"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -2087,6 +2126,85 @@ export const AdminPage: React.FC = () => {
                 className="flex-1 py-2.5 bg-[#DC2626] hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow"
               >
                 Sim, Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: LINHA DO TEMPO / HISTÓRICO DE AUDITORIA DO RESGATE */}
+      {modalHistoricoOcorrencia && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-[#EFF6FF] text-[#0B6EFD] rounded-xl border border-[#BFDBFE]">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#1A1D1F]">
+                    Trilha de Auditoria #{modalHistoricoOcorrencia.numero_pulseira}
+                  </h3>
+                  <p className="text-[11px] text-[#6B7280]">
+                    {modalHistoricoOcorrencia.cadastro?.nome_crianca ? `${modalHistoricoOcorrencia.cadastro.nome_crianca} • ` : ''}Linha do tempo oficial
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setModalHistoricoOcorrencia(null)}
+                className="p-1.5 rounded-lg text-[#6B7280] hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Linha do tempo vertical */}
+            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1 py-1">
+              {(!modalHistoricoOcorrencia.historico_status || modalHistoricoOcorrencia.historico_status.length === 0) ? (
+                <div className="p-4 rounded-xl bg-slate-50 border border-[#E5E7EB] text-center space-y-2">
+                  <Clock className="w-8 h-8 text-[#6B7280] mx-auto opacity-50" />
+                  <p className="text-xs text-[#6B7280]">
+                    Alerta registrado em <strong>{formatarDataHora(modalHistoricoOcorrencia.horario_alerta)}</strong>.
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Status atual: {modalHistoricoOcorrencia.status}
+                  </p>
+                </div>
+              ) : (
+                <div className="relative border-l-2 border-slate-200 ml-4 space-y-4 py-1">
+                  {modalHistoricoOcorrencia.historico_status.map((item, idx) => (
+                    <div key={idx} className="relative pl-6">
+                      {/* Ponto indicador */}
+                      <span className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${
+                        item.status === 'Reencontro realizado'
+                          ? 'bg-[#16A34A] ring-2 ring-[#DCFCE7]'
+                          : 'bg-[#FF6B35] ring-2 ring-[#FFF4EE]'
+                      }`}></span>
+                      
+                      <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB] space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <StatusBadge status={item.status} size="sm" />
+                          <span className="text-[10px] font-mono text-[#6B7280]">
+                            {formatarDataHora(item.data)}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#1A1D1F] flex items-center gap-1.5 pt-1">
+                          <UserIcon className="w-3.5 h-3.5 text-[#6B7280]" />
+                          <span>Atualizado por: <strong>{item.operador || 'Operador'}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setModalHistoricoOcorrencia(null)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-[#1A1D1F] rounded-xl text-xs font-bold transition-colors"
+              >
+                Fechar Trilha
               </button>
             </div>
           </div>
