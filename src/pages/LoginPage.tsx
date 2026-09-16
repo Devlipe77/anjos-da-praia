@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { Tenda, traduzirErroSupabase } from '../types';
+import { validateEmail } from '@felipe7/valida-form';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,18 +53,26 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setErro(null);
     setSucesso(null);
+
+    // Validação de E-mail utilizando o pacote oficial @felipe7/valida-form
+    const emailResult = validateEmail(email.trim());
+    if (!emailResult.isValid) {
+      setErro(emailResult.error || 'Por favor, informe um endereço de e-mail válido.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (tab === 'login') {
-        await dataService.fazerLogin(email, senha);
+        await dataService.fazerLogin(email.trim(), senha);
         navigate('/admin', { replace: true });
       } else {
         if (!nome.trim()) {
           throw new Error('Por favor, informe seu nome completo.');
         }
         await dataService.cadastrarOperador({
-          email,
+          email: email.trim(),
           senha,
           nome,
           tendaId: tendaId || undefined,

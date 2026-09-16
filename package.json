@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@felipe7/valida-form": "^1.0.2",
     "@supabase/supabase-js": "^2.49.1",
     "canvas-confetti": "^1.9.4",
     "html5-qrcode": "^2.3.8",
