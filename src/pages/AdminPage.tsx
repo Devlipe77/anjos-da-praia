@@ -496,6 +496,24 @@ export const AdminPage: React.FC = () => {
     return limpo.startsWith('55') ? limpo : `55${limpo}`;
   };
 
+  // Formatação completa e exata da data e hora: dd/mm/aaaa hh:mm:ss
+  const formatarDataHora = (dataIso?: string | null) => {
+    if (!dataIso) return '-';
+    try {
+      const d = new Date(dataIso);
+      if (isNaN(d.getTime())) return dataIso;
+      const dia = String(d.getDate()).padStart(2, '0');
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const ano = d.getFullYear();
+      const horas = String(d.getHours()).padStart(2, '0');
+      const minutos = String(d.getMinutes()).padStart(2, '0');
+      const segundos = String(d.getSeconds()).padStart(2, '0');
+      return `${dia}/${mes}/${ano} ${horas}:${minutos}:${segundos}`;
+    } catch {
+      return dataIso;
+    }
+  };
+
   // Exportação de Relatório Geral em formato CSV para a Associação e Parceiros
   const exportarRelatorioCSV = () => {
     try {
@@ -1036,7 +1054,12 @@ export const AdminPage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <StatusBadge status={oco.status} size="sm" />
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[10px] text-[#6B7280] bg-slate-100 px-1.5 py-0.5 rounded-md border border-[#E5E7EB]">
+                                {formatarDataHora(oco.horario_alerta)}
+                              </span>
+                              <StatusBadge status={oco.status} size="sm" />
+                            </div>
                           </div>
 
                           {/* Dados da Família */}
@@ -1528,8 +1551,8 @@ export const AdminPage: React.FC = () => {
                           <td className="py-3 px-3">
                             <StatusBadge status={oco.status} size="sm" />
                           </td>
-                          <td className="py-3 px-3 font-mono text-[11px] text-[#6B7280]">
-                            {oco.horario_alerta ? new Date(oco.horario_alerta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          <td className="py-3 px-3 font-mono text-[11px] text-[#6B7280] whitespace-nowrap">
+                            {formatarDataHora(oco.horario_alerta)}
                           </td>
                           <td className="py-3 px-3 text-[11px] text-[#6B7280]">
                             {oco.tendaMaisProxima?.tenda?.nome || 'Pendente'}
