@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
   finalizada_em TIMESTAMP WITH TIME ZONE,
   atendido_por VARCHAR(100),
   notas_atendimento TEXT,
-  tenda_atendimento_id UUID REFERENCES tendas(id) ON DELETE SET NULL
+  tenda_atendimento_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
+  historico_status JSONB DEFAULT '[]'::jsonb
 );
 
 -- 4. Tabela de Perfil de Operadores da Tenda (vinculada ao Supabase Auth)
