@@ -11,11 +11,12 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'wings.png', 'apple-touch-icon.png'],
       manifest: {
+        id: '/',
         name: 'Anjos da Praia — Apoio e Reencontro',
         short_name: 'Anjos da Praia',
         description: 'Central de Segurança e Reencontro Rápido de Crianças nas Praias de Guarapari - CBMES / Salvamar',
         theme_color: '#FF6B35',
-        background_color: '#F9FAFB',
+        background_color: '#FFFFFF',
         display: 'standalone',
         orientation: 'any',
         scope: '/',
@@ -29,16 +30,22 @@ export default defineConfig({
             purpose: 'any'
           },
           {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: 'https://agpynfhvmyaiupynrznx.supabase.co/storage/v1/object/public/padrao/wings.png',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any'
+            purpose: 'maskable'
           }
         ]
       },
