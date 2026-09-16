@@ -131,6 +131,14 @@ export function traduzirErroSupabase(erro: any): string {
     return 'Um ou mais campos obrigatórios não foram preenchidos.';
   }
 
+  // 5. Check Constraint (PostgreSQL 23514)
+  if (codigo === '23514' || textoCompleto.includes('violates check constraint')) {
+    if (textoCompleto.includes('ocorrencias_status_check')) {
+      return 'O banco de dados não tem permissão para o status "Responsáveis localizados". Execute o comando SQL no Supabase para atualizar a regra de validação.';
+    }
+    return 'O valor informado não é aceito pelas regras de validação do banco de dados.';
+  }
+
   // 5. Erros de Rede / Conexão
   if (textoCompleto.includes('failed to fetch') || textoCompleto.includes('network request failed')) {
     return 'Falha de conexão com os servidores. Verifique sua conexão com a internet e tente novamente.';

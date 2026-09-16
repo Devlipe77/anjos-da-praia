@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
   longitude NUMERIC(10, 7) NOT NULL,
   precisao_metros NUMERIC(8, 2) DEFAULT 0,
   status VARCHAR(30) DEFAULT 'Criança localizada' CHECK (
-    status IN ('Criança localizada', 'Equipe a caminho', 'Criança recebida', 'Reencontro realizado')
+    status IN ('Criança localizada', 'Equipe a caminho', 'Criança recebida', 'Responsáveis localizados', 'Reencontro realizado')
   ),
   horario_alerta TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   finalizada_em TIMESTAMP WITH TIME ZONE,
