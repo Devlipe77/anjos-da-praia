@@ -4,11 +4,22 @@
 -- Sem dados mockados: cadastros e autenticação 100% reais
 -- ==========================================================
 
--- 1. Tabela de Tendas / Postos de Apoio na Orla
+-- 1. Tabela de Praias Oficiais de Guarapari
+CREATE TABLE IF NOT EXISTS praias (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(100) NOT NULL UNIQUE,
+  regiao VARCHAR(60) NOT NULL DEFAULT 'Centro',
+  latitude_padrao NUMERIC(10, 7) NOT NULL,
+  longitude_padrao NUMERIC(10, 7) NOT NULL,
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Tabela de Tendas / Postos de Apoio na Orla
 CREATE TABLE IF NOT EXISTS tendas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome VARCHAR(100) NOT NULL,
   praia VARCHAR(80) NOT NULL,
+  praia_id UUID REFERENCES praias(id) ON DELETE SET NULL,
   latitude NUMERIC(10, 7) NOT NULL,
   longitude NUMERIC(10, 7) NOT NULL,
   responsavel_posto VARCHAR(100),
@@ -69,12 +80,21 @@ CREATE INDEX IF NOT EXISTS idx_tendas_ativa ON tendas(ativa);
 ALTER PUBLICATION supabase_realtime ADD TABLE ocorrencias;
 ALTER PUBLICATION supabase_realtime ADD TABLE cadastros_pulseiras;
 ALTER PUBLICATION supabase_realtime ADD TABLE tendas;
+ALTER PUBLICATION supabase_realtime ADD TABLE praias;
 
 -- 7. Políticas de Segurança (Row Level Security - RLS)
+ALTER TABLE praias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tendas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cadastros_pulseiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ocorrencias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operadores ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para Praias
+DROP POLICY IF EXISTS "Leitura de praias" ON praias;
+CREATE POLICY "Leitura de praias" ON praias FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Gerenciamento de praias" ON praias;
+CREATE POLICY "Gerenciamento de praias" ON praias FOR ALL USING (true);
 
 -- Políticas para Tendas
 DROP POLICY IF EXISTS "Leitura de tendas" ON tendas;

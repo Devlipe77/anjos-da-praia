@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus } from '../types';
+import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus, Praia } from '../types';
 
 const supabaseUrl = 
   import.meta.env.VITE_SUPABASE_URL || 
@@ -63,6 +63,38 @@ export const dataService = {
     }
     return data || [];
   },
+ 
+  // --------------------------------------------------------
+  // 1.1 PRAIAS OFICIAIS DE GUARAPARI
+  // --------------------------------------------------------
+  async listarPraias(): Promise<Praia[]> {
+    const { data, error } = await supabase
+      .from('praias')
+      .select('*')
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.warn('Tabela praias pode não ter sido criada ainda no Supabase:', error.message);
+      return [];
+    }
+    return data || [];
+  },
+
+  async criarPraia(praia: Omit<Praia, 'id' | 'criado_em'>): Promise<Praia> {
+    const { data, error } = await supabase
+      .from('praias')
+      .insert([{
+        nome: praia.nome.trim(),
+        regiao: praia.regiao.trim(),
+        latitude_padrao: praia.latitude_padrao,
+        longitude_padrao: praia.longitude_padrao,
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
 
   async criarTenda(tenda: Omit<Tenda, 'id' | 'criado_em'>): Promise<Tenda> {
     const { data, error } = await supabase
@@ -70,6 +102,7 @@ export const dataService = {
       .insert([{
         nome: tenda.nome.trim(),
         praia: tenda.praia.trim(),
+        praia_id: tenda.praia_id || null,
         latitude: tenda.latitude,
         longitude: tenda.longitude,
         responsavel_posto: tenda.responsavel_posto?.trim() || null,

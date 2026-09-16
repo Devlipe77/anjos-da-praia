@@ -41,7 +41,7 @@ import {
   History
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
-import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase } from '../types';
+import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia } from '../types';
 import { MapView } from '../components/MapView';
 import { StatusBadge } from '../components/StatusBadge';
 import { QRCodeModal, QRScannerModal } from '../components/QRCodeModal';
@@ -123,14 +123,60 @@ export const AdminPage: React.FC = () => {
     }, 5000);
   };
 
+  // Lista de Praias Oficiais de Guarapari
+  const [praiasCadastradas, setPraiasCadastradas] = useState<Praia[]>([]);
+  const [formTendaPraiaId, setFormTendaPraiaId] = useState<string | undefined>(undefined);
+
+  // Lista de fallback completa com 32 praias oficiais de Guarapari com coordenadas reais
+  const PRAIAS_GUARAPARI_PADRAO: Praia[] = useMemo(() => [
+    { nome: 'Praia do Morro', regiao: 'Praia do Morro', latitude_padrao: -20.6552, longitude_padrao: -40.4880 },
+    { nome: 'Praia das Castanheiras', regiao: 'Centro', latitude_padrao: -20.6720, longitude_padrao: -40.4975 },
+    { nome: 'Praia da Areia Preta', regiao: 'Centro', latitude_padrao: -20.6765, longitude_padrao: -40.5005 },
+    { nome: 'Praia dos Namorados', regiao: 'Centro', latitude_padrao: -20.6708, longitude_padrao: -40.4962 },
+    { nome: 'Praia do Meio', regiao: 'Centro', latitude_padrao: -20.6740, longitude_padrao: -40.4990 },
+    { nome: 'Praia das Virtudes', regiao: 'Centro', latitude_padrao: -20.6701, longitude_padrao: -40.4948 },
+    { nome: 'Praia da Fonte', regiao: 'Centro', latitude_padrao: -20.6715, longitude_padrao: -40.4935 },
+    { nome: 'Prainha de Muquiçaba', regiao: 'Muquiçaba', latitude_padrao: -20.6610, longitude_padrao: -40.5040 },
+    { nome: 'Praia do Riacho', regiao: 'Ipiranga', latitude_padrao: -20.6900, longitude_padrao: -40.5120 },
+    { nome: 'Praia de Bacutia', regiao: 'Enseada Azul', latitude_padrao: -20.7180, longitude_padrao: -40.5210 },
+    { nome: 'Praia de Peracanga', regiao: 'Enseada Azul', latitude_padrao: -20.7130, longitude_padrao: -40.5190 },
+    { nome: 'Praia de Guaibura', regiao: 'Enseada Azul', latitude_padrao: -20.7070, longitude_padrao: -40.5160 },
+    { nome: 'Praia dos Padres', regiao: 'Enseada Azul', latitude_padrao: -20.7230, longitude_padrao: -40.5240 },
+    { nome: 'Praia de Mucunã', regiao: 'Enseada Azul', latitude_padrao: -20.7095, longitude_padrao: -40.5175 },
+    { nome: 'Praia de Meaípe', regiao: 'Meaípe', latitude_padrao: -20.7420, longitude_padrao: -40.5280 },
+    { nome: 'Praia de Maimbá', regiao: 'Sul', latitude_padrao: -20.7550, longitude_padrao: -40.5350 },
+    { nome: 'Praia de Porto Grande', regiao: 'Sul', latitude_padrao: -20.7620, longitude_padrao: -40.5420 },
+    { nome: 'Praia de Ubu (Divisa)', regiao: 'Sul', latitude_padrao: -20.7890, longitude_padrao: -40.5750 },
+    { nome: 'Praia da Cerca', regiao: 'Norte', latitude_padrao: -20.6480, longitude_padrao: -40.4820 },
+    { nome: 'Praia de Santa Mônica', regiao: 'Santa Mônica', latitude_padrao: -20.6280, longitude_padrao: -40.4680 },
+    { nome: 'Praia de Setiba', regiao: 'Setiba', latitude_padrao: -20.6120, longitude_padrao: -40.4500 },
+    { nome: 'Praia de Setiba Pina', regiao: 'Setiba', latitude_padrao: -20.6080, longitude_padrao: -40.4460 },
+    { nome: 'Praia de Setibão', regiao: 'Setiba', latitude_padrao: -20.6020, longitude_padrao: -40.4410 },
+    { nome: 'Praia de Una', regiao: 'Norte', latitude_padrao: -20.5850, longitude_padrao: -40.4320 },
+    { nome: 'Três Praias', regiao: 'Norte', latitude_padrao: -20.6380, longitude_padrao: -40.4720 },
+    { nome: 'Praia dos Adventistas', regiao: 'Norte', latitude_padrao: -20.6330, longitude_padrao: -40.4690 },
+    { nome: 'Praia do Morcego', regiao: 'Norte', latitude_padrao: -20.6410, longitude_padrao: -40.4750 },
+    { nome: 'Praia de Mateus Lopes', regiao: 'Norte', latitude_padrao: -20.6360, longitude_padrao: -40.4710 },
+    { nome: 'Praia do Ermitão', regiao: 'Morro da Pescaria', latitude_padrao: -20.6500, longitude_padrao: -40.4740 },
+    { nome: 'Praia da Areia Vermelha', regiao: 'Morro da Pescaria', latitude_padrao: -20.6520, longitude_padrao: -40.4760 },
+    { nome: 'Praia da Raposa', regiao: 'Morro da Pescaria', latitude_padrao: -20.6540, longitude_padrao: -40.4790 },
+    { nome: 'Prainha dos Pescadores', regiao: 'Morro da Pescaria', latitude_padrao: -20.6560, longitude_padrao: -40.4810 }
+  ], []);
+
+  // Lista unificada de praias para os selects (combos)
+  const listaPraiasAtivas = useMemo(() => {
+    return praiasCadastradas.length > 0 ? praiasCadastradas : PRAIAS_GUARAPARI_PADRAO;
+  }, [praiasCadastradas, PRAIAS_GUARAPARI_PADRAO]);
+
   // Presets de Praias e Coordenadas de Guarapari
   const PRESETS_GUARAPARI = [
-    { nome: 'Praia do Morro (Central)', praia: 'Praia do Morro', lat: -20.6590, lng: -40.4950 },
+    { nome: 'Praia do Morro (Central)', praia: 'Praia do Morro', lat: -20.6552, lng: -40.4880 },
     { nome: 'Pedra do Siribeira', praia: 'Praia do Morro', lat: -20.6525, lng: -40.4850 },
     { nome: 'Castanheiras', praia: 'Praia das Castanheiras', lat: -20.6720, lng: -40.4975 },
     { nome: 'Areia Preta', praia: 'Praia da Areia Preta', lat: -20.6765, lng: -40.5005 },
     { nome: 'Meaípe', praia: 'Praia de Meaípe', lat: -20.7420, lng: -40.5280 },
-    { nome: 'Enseada Azul', praia: 'Enseada Azul', lat: -20.7150, lng: -40.5180 },
+    { nome: 'Bacutia', praia: 'Praia de Bacutia', lat: -20.7180, lng: -40.5210 },
+    { nome: 'Setiba', praia: 'Praia de Setiba', lat: -20.6120, lng: -40.4500 },
   ];
 
   // Estado de captura de GPS para tendas
@@ -264,11 +310,16 @@ export const AdminPage: React.FC = () => {
   // Carregar dados de produção
   const carregarDados = async (tocarSom = false) => {
     try {
-      const [ocos, cads, tens] = await Promise.all([
+      const [ocos, cads, tens, prs] = await Promise.all([
         dataService.listarOcorrencias(),
         dataService.listarCadastros(),
         dataService.listarTendas(),
+        dataService.listarPraias(),
       ]);
+
+      if (prs && prs.length > 0) {
+        setPraiasCadastradas(prs);
+      }
 
       if (tocarSom && ocos.length > ocorrencias.length) {
         tocarBipAlerta();
@@ -450,6 +501,7 @@ export const AdminPage: React.FC = () => {
       const nova = await dataService.criarTenda({
         nome: formTendaNome.trim(),
         praia: formTendaPraia.trim(),
+        praia_id: formTendaPraiaId || null,
         latitude: parseFloat(formTendaLat) || -20.6590,
         longitude: parseFloat(formTendaLng) || -40.4950,
         responsavel_posto: formTendaResp.trim() || undefined,
@@ -462,6 +514,7 @@ export const AdminPage: React.FC = () => {
       setFormTendaNome('');
       setFormTendaResp('');
       setFormTendaTel('');
+      setFormTendaPraiaId(undefined);
       setErroModalTenda(null);
       showToast('Posto cadastrado com sucesso!', 'sucesso');
     } catch (err: any) {
@@ -480,6 +533,7 @@ export const AdminPage: React.FC = () => {
       const atualizada = await dataService.atualizarTenda(modalEdicaoTenda.id, {
         nome: modalEdicaoTenda.nome,
         praia: modalEdicaoTenda.praia,
+        praia_id: modalEdicaoTenda.praia_id || null,
         latitude: parseFloat(String(modalEdicaoTenda.latitude)) || 0,
         longitude: parseFloat(String(modalEdicaoTenda.longitude)) || 0,
         responsavel_posto: modalEdicaoTenda.responsavel_posto,
@@ -1677,16 +1731,17 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block font-bold mb-1">Praia</label>
+                <label className="block font-bold mb-1">Praia de Origem / Balneário</label>
                 <select
                   value={formPulseiraPraia}
                   onChange={(e) => setFormPulseiraPraia(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#FF6B35]"
                 >
-                  <option value="Praia do Morro">Praia do Morro</option>
-                  <option value="Praia das Castanheiras">Praia das Castanheiras</option>
-                  <option value="Praia da Areia Preta">Praia da Areia Preta</option>
-                  <option value="Praia de Meaípe">Praia de Meaípe</option>
+                  {listaPraiasAtivas.map((p) => (
+                    <option key={p.nome} value={p.nome}>
+                      {p.nome} ({p.regiao})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -1830,15 +1885,32 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block font-bold mb-1">Praia *</label>
-                <input
-                  type="text"
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold">Praia de Localização *</label>
+                  <span className="text-[10px] text-[#FF6B35] font-semibold">Preenche GPS automático</span>
+                </div>
+                <select
                   required
-                  placeholder="Ex: Praia do Morro"
                   value={formTendaPraia}
-                  onChange={(e) => setFormTendaPraia(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35]"
-                />
+                  onChange={(e) => {
+                    const praiaNome = e.target.value;
+                    setFormTendaPraia(praiaNome);
+                    const praiaObj = listaPraiasAtivas.find(p => p.nome === praiaNome);
+                    if (praiaObj) {
+                      setFormTendaPraiaId(praiaObj.id);
+                      setFormTendaLat(praiaObj.latitude_padrao.toFixed(6));
+                      setFormTendaLng(praiaObj.longitude_padrao.toFixed(6));
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1A1D1F] font-bold outline-none focus:border-[#FF6B35]"
+                >
+                  <option value="" disabled>Selecione uma praia oficial de Guarapari...</option>
+                  {listaPraiasAtivas.map((p) => (
+                    <option key={p.nome} value={p.nome}>
+                      {p.nome} ({p.regiao})
+                    </option>
+                  ))}
+                </select>
               </div>
               {/* Localização & Coordenadas */}
               <div className="p-3 bg-[#F9F1E7]/50 rounded-2xl border border-[#FF6B35]/20 space-y-2.5">
@@ -1955,14 +2027,33 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block font-bold mb-1">Praia *</label>
-                <input
-                  type="text"
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold">Praia de Localização *</label>
+                  <span className="text-[10px] text-[#FF6B35] font-semibold">Preenche GPS automático</span>
+                </div>
+                <select
                   required
                   value={modalEdicaoTenda.praia || ''}
-                  onChange={(e) => setModalEdicaoTenda({ ...modalEdicaoTenda, praia: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35]"
-                />
+                  onChange={(e) => {
+                    const praiaNome = e.target.value;
+                    const praiaObj = listaPraiasAtivas.find(p => p.nome === praiaNome);
+                    setModalEdicaoTenda({
+                      ...modalEdicaoTenda,
+                      praia: praiaNome,
+                      praia_id: praiaObj?.id || modalEdicaoTenda.praia_id || null,
+                      latitude: praiaObj ? praiaObj.latitude_padrao : modalEdicaoTenda.latitude,
+                      longitude: praiaObj ? praiaObj.longitude_padrao : modalEdicaoTenda.longitude,
+                    });
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1A1D1F] font-bold outline-none focus:border-[#FF6B35]"
+                >
+                  <option value="" disabled>Selecione uma praia oficial de Guarapari...</option>
+                  {listaPraiasAtivas.map((p) => (
+                    <option key={p.nome} value={p.nome}>
+                      {p.nome} ({p.regiao})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Seletor de Localização e Coordenadas para Edição */}

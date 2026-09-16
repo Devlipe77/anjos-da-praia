@@ -5,10 +5,20 @@ export type StatusOcorrencia =
   | 'Responsáveis localizados'
   | 'Reencontro realizado';
 
+export interface Praia {
+  id?: string;
+  nome: string;
+  regiao: string;
+  latitude_padrao: number;
+  longitude_padrao: number;
+  criado_em?: string;
+}
+
 export interface Tenda {
   id?: string;
   nome: string;
   praia: string;
+  praia_id?: string | null;
   latitude: number;
   longitude: number;
   responsavel_posto?: string;
