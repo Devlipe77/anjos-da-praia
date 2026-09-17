@@ -365,12 +365,23 @@ export const dataService = {
   // --------------------------------------------------------
   // 5. AUTENTICAÇÃO DE OPERADORES (SUPABASE AUTH)
   // --------------------------------------------------------
+  // Código Oficial de Autorização da Associação Anjos da Praia (Opção B)
+  CODIGO_AUTORIZACAO_OFICIAL: 'ANJOS2026',
+
   async cadastrarOperador(params: {
     email: string;
     senha: string;
     nome: string;
     tendaId?: string;
+    codigoAutorizacao?: string;
+    role?: 'admin' | 'operador';
   }) {
+    // Validação da Chave de Acesso Institucional
+    const codigoInformado = (params.codigoAutorizacao || '').trim().toUpperCase();
+    if (codigoInformado !== dataService.CODIGO_AUTORIZACAO_OFICIAL) {
+      throw new Error('Código de Autorização Institucional inválido. Solicite o código à coordenação dos Anjos da Praia.');
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: params.email.trim(),
       password: params.senha,
@@ -378,6 +389,8 @@ export const dataService = {
         data: {
           nome: params.nome.trim(),
           tenda_id: params.tendaId || null,
+          role: params.role || 'operador',
+          status: 'ativo',
         }
       }
     });
@@ -392,6 +405,8 @@ export const dataService = {
           nome: params.nome.trim(),
           email: params.email.trim(),
           tenda_id: params.tendaId || null,
+          role: params.role || 'operador',
+          status: 'ativo',
         }]);
       } catch (e) {
         console.warn('Perfil de operador salvo nos metadados do Auth.');
@@ -407,6 +422,16 @@ export const dataService = {
       password: senha,
     });
     if (error) throw error;
+
+    // Verificar se o operador está bloqueado
+    if (data.user) {
+      const op = await this.obterOperador(data.user.id);
+      if (op && op.status === 'bloqueado') {
+        await this.fazerLogout();
+        throw new Error('Seu acesso de operador foi desativado pela coordenação. Entre em contato com o administrador.');
+      }
+    }
+
     return data;
   },
 
@@ -424,7 +449,7 @@ export const dataService = {
     try {
       const { data, error } = await supabase
         .from('operadores')
-        .select('*')
+        .select('*, tendas(*)')
         .eq('id', userId)
         .maybeSingle();
       if (error) {
@@ -436,6 +461,31 @@ export const dataService = {
       console.warn('Exceção ao obter operador:', err);
       return null;
     }
+  },
+
+  async listarOperadores(): Promise<Operador[]> {
+    try {
+      const { data, error } = await supabase
+        .from('operadores')
+        .select('*, tendas(*)')
+        .order('criado_em', { ascending: true });
+      if (error) {
+        console.warn('Erro ao listar operadores:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.warn('Exceção ao listar operadores:', err);
+      return [];
+    }
+  },
+
+  async atualizarOperador(userId: string, dados: Partial<Operador>): Promise<void> {
+    const { error } = await supabase
+      .from('operadores')
+      .update(dados)
+      .eq('id', userId);
+    if (error) throw error;
   },
 
   async atualizarTendaOperador(userId: string, tendaId: string | null): Promise<void> {

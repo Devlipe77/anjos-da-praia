@@ -32,7 +32,9 @@ export interface Operador {
   nome: string;
   email?: string;
   tenda_id?: string | null;
-  role?: string;
+  role?: 'admin' | 'operador' | string;
+  status?: 'ativo' | 'bloqueado' | 'pendente' | string;
+  tenda?: Tenda;
   criado_em?: string;
 }
 
@@ -73,7 +75,7 @@ export interface Ocorrencia {
   tendaMaisProxima?: {
     tenda: Tenda;
     distanciaMetros: number;
-  };
+  } | null;
 }
 
 /**

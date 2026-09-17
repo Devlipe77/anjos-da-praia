@@ -338,6 +338,25 @@ export const AlertPage: React.FC = () => {
                   <p>3. A equipe dos Anjos da Praia está uniformizada e chegará em instantes.</p>
                 </div>
 
+                {/* Mensagens Institucionais dos Parceiros da Associação (Requisito 7 do Edital) */}
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-left text-[11px] text-[#475569] space-y-2">
+                  <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-1.5">
+                    <span className="font-bold text-[#0F172A] uppercase tracking-wider text-[10px]">
+                      Apoio Institucional Oficial
+                    </span>
+                    <span className="text-[10px] text-[#16A34A] font-extrabold bg-[#DCFCE7] px-2 py-0.5 rounded-full">
+                      Parceria Ativa
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Ação integrada com o <strong>Corpo de Bombeiros Militar do ES (CBMES)</strong> e a <strong>Prefeitura Municipal de Guarapari</strong>.
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-[#DC2626] font-bold bg-red-50 p-2 rounded-lg border border-red-100">
+                    <span>🚨 Emergência médica ou afogamento:</span>
+                    <a href="tel:193" className="underline hover:text-red-800">Ligue 193 (Bombeiros)</a>
+                  </div>
+                </div>
+
                 <div className="pt-2">
                   <button
                     type="button"
@@ -356,8 +375,11 @@ export const AlertPage: React.FC = () => {
         </div>
       </main>
 
-      <footer className="py-3 text-center text-[11px] text-[#6B7280]">
-        Associação Anjos da Praia • Guarapari - ES
+      <footer className="py-3 text-center text-[11px] text-[#6B7280] space-y-0.5">
+        <div>Associação Anjos da Praia • Guarapari - ES</div>
+        <div className="text-[10px] text-[#94A3B8]">
+          Em cooperação com Corpo de Bombeiros Militar ES & Prefeitura Municipal de Guarapari
+        </div>
       </footer>
 
       {/* Modal Leitor de QR Code pela Câmera */}

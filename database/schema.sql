@@ -66,58 +66,78 @@ CREATE TABLE IF NOT EXISTS operadores (
   nome VARCHAR(100) NOT NULL,
   email VARCHAR(120),
   tenda_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
-  role VARCHAR(30) DEFAULT 'operador',
+  role VARCHAR(30) DEFAULT 'operador' CHECK (role IN ('admin', 'operador')),
+  status VARCHAR(30) DEFAULT 'ativo' CHECK (status IN ('ativo', 'bloqueado', 'pendente')),
   criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Se a tabela já existir no Supabase, adiciona as colunas se não existirem:
+ALTER TABLE operadores ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'operador';
+ALTER TABLE operadores ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'ativo';
 
 -- 5. Índices para agilidade e buscas instantâneas
 CREATE INDEX IF NOT EXISTS idx_pulseira_numero ON cadastros_pulseiras(numero_pulseira);
 CREATE INDEX IF NOT EXISTS idx_ocorrencias_pulseira ON ocorrencias(numero_pulseira);
 CREATE INDEX IF NOT EXISTS idx_ocorrencias_status ON ocorrencias(status);
 CREATE INDEX IF NOT EXISTS idx_tendas_ativa ON tendas(ativa);
+CREATE INDEX IF NOT EXISTS idx_operadores_status ON operadores(status);
 
 -- 6. Habilitar Realtime para escuta em tempo real no dashboard
 ALTER PUBLICATION supabase_realtime ADD TABLE ocorrencias;
 ALTER PUBLICATION supabase_realtime ADD TABLE cadastros_pulseiras;
 ALTER PUBLICATION supabase_realtime ADD TABLE tendas;
 ALTER PUBLICATION supabase_realtime ADD TABLE praias;
+ALTER PUBLICATION supabase_realtime ADD TABLE operadores;
 
--- 7. Políticas de Segurança (Row Level Security - RLS)
+-- 7. Políticas de Segurança Refinadas (Row Level Security - RLS)
+-- Conformidade com a Lei Geral de Proteção de Dados (LGPD) e Edital Anhanguera
 ALTER TABLE praias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tendas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cadastros_pulseiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ocorrencias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operadores ENABLE ROW LEVEL SECURITY;
 
--- Políticas para Praias
+-- Políticas para Praias (Leitura pública para o mapa, alteração apenas por operadores)
 DROP POLICY IF EXISTS "Leitura de praias" ON praias;
 CREATE POLICY "Leitura de praias" ON praias FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Gerenciamento de praias" ON praias;
-CREATE POLICY "Gerenciamento de praias" ON praias FOR ALL USING (true);
+CREATE POLICY "Gerenciamento de praias" ON praias FOR ALL TO authenticated USING (true);
 
--- Políticas para Tendas
+-- Políticas para Tendas (Leitura pública para localização, alteração apenas por operadores)
 DROP POLICY IF EXISTS "Leitura de tendas" ON tendas;
 CREATE POLICY "Leitura de tendas" ON tendas FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Gerenciamento de tendas" ON tendas;
-CREATE POLICY "Gerenciamento de tendas" ON tendas FOR ALL USING (true);
+CREATE POLICY "Gerenciamento de tendas" ON tendas FOR ALL TO authenticated USING (true);
 
--- Políticas para Cadastros de Pulseiras (Operadores autenticados e API da tenda)
+-- Políticas para Cadastros de Pulseiras (LGPD: Apenas operadores autenticados podem ver dados de crianças/pais)
 DROP POLICY IF EXISTS "Acesso a cadastros de pulseiras" ON cadastros_pulseiras;
-CREATE POLICY "Acesso a cadastros de pulseiras" ON cadastros_pulseiras FOR ALL USING (true);
+CREATE POLICY "Acesso restrito a operadores autenticados" ON cadastros_pulseiras 
+  FOR ALL TO authenticated USING (true);
 
 -- Políticas para Ocorrências:
--- Banhista anônimo pode inserir chamado via QR Code
+-- Banhista anônimo pode inserir chamado emergencial via QR Code
 DROP POLICY IF EXISTS "Banhista pode inserir ocorrencia" ON ocorrencias;
-CREATE POLICY "Banhista pode inserir ocorrencia" ON ocorrencias FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Banhista anônimo pode emitir alerta" ON ocorrencias;
+CREATE POLICY "Banhista anônimo pode emitir alerta" ON ocorrencias 
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+-- Apenas operadores autenticados podem visualizar e gerenciar o histórico de ocorrências
 DROP POLICY IF EXISTS "Leitura de ocorrencias" ON ocorrencias;
-CREATE POLICY "Leitura de ocorrencias" ON ocorrencias FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Operador pode visualizar ocorrencias" ON ocorrencias;
+CREATE POLICY "Operador pode visualizar ocorrencias" ON ocorrencias 
+  FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Atualizacao e exclusao de ocorrencias" ON ocorrencias;
-CREATE POLICY "Atualizacao e exclusao de ocorrencias" ON ocorrencias FOR ALL USING (true);
+DROP POLICY IF EXISTS "Operador pode atualizar ocorrencias" ON ocorrencias;
+CREATE POLICY "Operador pode atualizar ocorrencias" ON ocorrencias 
+  FOR UPDATE TO authenticated USING (true);
 
--- Políticas para Operadores
+-- Políticas para Operadores:
+-- Apenas usuários autenticados podem consultar e gerenciar a equipe
 DROP POLICY IF EXISTS "Acesso operadores" ON operadores;
-CREATE POLICY "Acesso operadores" ON operadores FOR ALL USING (true);
+DROP POLICY IF EXISTS "Acesso seguro a operadores" ON operadores;
+CREATE POLICY "Acesso seguro a operadores" ON operadores 
+  FOR ALL TO authenticated USING (true);
+

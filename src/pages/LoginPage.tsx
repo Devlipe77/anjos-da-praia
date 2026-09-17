@@ -25,6 +25,8 @@ export const LoginPage: React.FC = () => {
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [tendaId, setTendaId] = useState('');
+  const [codigoAutorizacao, setCodigoAutorizacao] = useState('');
+  const [roleOperador, setRoleOperador] = useState<'operador' | 'admin'>('operador');
   const [tendas, setTendas] = useState<Tenda[]>([]);
 
   // Estados de feedback
@@ -71,21 +73,26 @@ export const LoginPage: React.FC = () => {
         if (!nome.trim()) {
           throw new Error('Por favor, informe seu nome completo.');
         }
+        if (!codigoAutorizacao.trim()) {
+          throw new Error('Por favor, informe o Código de Autorização Institucional fornecido pela coordenação.');
+        }
         await dataService.cadastrarOperador({
           email: email.trim(),
           senha,
           nome,
           tendaId: tendaId || undefined,
+          codigoAutorizacao: codigoAutorizacao.trim(),
+          role: roleOperador,
         });
 
-        setSucesso('Conta de operador criada com sucesso no Supabase! Entrando...');
+        setSucesso('Conta de operador autorizada e criada com sucesso! Entrando...');
         setTimeout(() => {
           navigate('/admin', { replace: true });
         }, 1200);
       }
     } catch (err: any) {
       console.error(err);
-      setErro(traduzirErroSupabase(err));
+      setErro(err?.message ? err.message : traduzirErroSupabase(err));
     } finally {
       setLoading(false);
     }
@@ -260,6 +267,68 @@ export const LoginPage: React.FC = () => {
                   </select>
                 </div>
               </div>
+            )}
+
+            {tab === 'cadastro' && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-[#1A1D1F] mb-1">
+                    Função / Nível de Acesso
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoleOperador('operador')}
+                      className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                        roleOperador === 'operador'
+                          ? 'border-[#FF6B35] bg-[#FFF5F1] text-[#FF6B35] shadow-sm'
+                          : 'border-[#E5E7EB] bg-white text-[#6B7280]'
+                      }`}
+                    >
+                      Voluntário / Posto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoleOperador('admin')}
+                      className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                        roleOperador === 'admin'
+                          ? 'border-[#0B6EFD] bg-[#EFF6FF] text-[#0B6EFD] shadow-sm'
+                          : 'border-[#E5E7EB] bg-white text-[#6B7280]'
+                      }`}
+                    >
+                      Coordenador Geral
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-[#FEF3C7] border border-[#FDE68A] p-3 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-[#B45309] flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Código de Autorização Institucional</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCodigoAutorizacao('ANJOS2026')}
+                      className="text-[10px] font-bold text-[#B45309] underline hover:text-[#92400E]"
+                      title="Preencher com a chave padrão da Associação para teste"
+                    >
+                      Preencher código padrão
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Chave fornecida pela Associação (Ex: ANJOS2026)"
+                    value={codigoAutorizacao}
+                    onChange={(e) => setCodigoAutorizacao(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 text-xs font-mono font-bold tracking-wider uppercase rounded-lg border border-[#FCD34D] focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] outline-none text-[#92400E] bg-white"
+                  />
+                  <p className="text-[10px] text-[#92400E] leading-tight">
+                    * Bloqueia cadastros públicos não autorizados para proteção de dados infantis (LGPD).
+                  </p>
+                </div>
+              </>
             )}
 
             <button

@@ -38,10 +38,11 @@ import {
   Smartphone,
   Laptop,
   ShieldCheck,
-  History
+  History,
+  Lock
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
-import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia } from '../types';
+import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia, Operador } from '../types';
 import { MapView } from '../components/MapView';
 import { StatusBadge } from '../components/StatusBadge';
 import { QRCodeModal, QRScannerModal } from '../components/QRCodeModal';
@@ -52,13 +53,14 @@ export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Seção ativa do menu lateral
-  const [secaoAtiva, setSecaoAtiva] = useState<'dashboard' | 'monitoramento' | 'pulseiras' | 'tendas' | 'impressao' | 'relatorios'>('dashboard');
+  const [secaoAtiva, setSecaoAtiva] = useState<'dashboard' | 'monitoramento' | 'pulseiras' | 'tendas' | 'impressao' | 'relatorios' | 'usuarios'>('dashboard');
   const [sidebarAberta, setSidebarAberta] = useState(false);
 
   // Estados de dados principais
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [cadastros, setCadastros] = useState<PulseiraCadastro[]>([]);
   const [tendas, setTendas] = useState<Tenda[]>([]);
+  const [operadoresLista, setOperadoresLista] = useState<Operador[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOcorrencia, setSelectedOcorrencia] = useState<Ocorrencia | null>(null);
 
@@ -66,6 +68,8 @@ export const AdminPage: React.FC = () => {
   const [operadorUserId, setOperadorUserId] = useState<string | null>(null);
   const [operadorEmail, setOperadorEmail] = useState<string>('operador@anjosdapraia.org');
   const [operadorNome, setOperadorNome] = useState<string>('Operador Central');
+  const [operadorRole, setOperadorRole] = useState<'admin' | 'operador' | string>('operador');
+  const [operadorStatus, setOperadorStatus] = useState<'ativo' | 'bloqueado' | string>('ativo');
   const [operadorTendaId, setOperadorTendaId] = useState<string | null>(null);
   const [tendaOperador, setTendaOperador] = useState<string>('Posto Praia do Morro');
 
@@ -114,6 +118,7 @@ export const AdminPage: React.FC = () => {
   // Configuração de Lote de Impressão
   const [loteInicio, setLoteInicio] = useState(1001);
   const [loteQuantidade, setLoteQuantidade] = useState(12);
+  const [tipoImpressao, setTipoImpressao] = useState<'individual' | 'geral'>('individual');
 
   // Notificações Toast no Topo
   const [toast, setToast] = useState<{ tipo: 'erro' | 'sucesso'; mensagem: string } | null>(null);
@@ -312,29 +317,42 @@ export const AdminPage: React.FC = () => {
   // Carregar dados de produção
   const carregarDados = async (tocarSom = false) => {
     try {
-      const [ocos, cads, tens, prs] = await Promise.all([
+      const [ocos, cads, tens, ops, prs] = await Promise.all([
         dataService.listarOcorrencias(),
         dataService.listarCadastros(),
         dataService.listarTendas(),
-        dataService.listarPraias(),
+        dataService.listarOperadores(),
+        dataService.listarPraias()
       ]);
 
       if (prs && prs.length > 0) {
         setPraiasCadastradas(prs);
       }
 
-      if (tocarSom && ocos.length > ocorrencias.length) {
-        tocarBipAlerta();
-        const nova = ocos[0];
-        dispararNotificacaoPush(
-          '🚨 NOVO ALERTA - Criança Localizada!',
-          `Pulseira #${nova.numero_pulseira} acionada na praia. Abra a central operacional.`
-        );
+      // Enriquecer ocorrências com o cadastro da pulseira
+      if (ocos.length > 0 && cads.length > 0) {
+        const cadsMap = new Map<string, PulseiraCadastro>();
+        cads.forEach(c => cadsMap.set(c.numero_pulseira, c));
+        ocos.forEach(o => {
+          o.cadastro = cadsMap.get(o.numero_pulseira);
+        });
+      }
+
+      // Calcular tenda mais próxima
+      if (ocos.length > 0 && tens.length > 0) {
+        ocos.forEach(o => {
+          o.tendaMaisProxima = dataService.calcularTendaMaisProxima(
+            Number(o.latitude),
+            Number(o.longitude),
+            tens
+          );
+        });
       }
 
       setOcorrencias(ocos);
       setCadastros(cads);
       setTendas(tens);
+      setOperadoresLista(ops);
 
       // Reconciliar o nome da tenda do operador caso já tenhamos o tenda_id
       if (operadorTendaId) {
@@ -365,6 +383,16 @@ export const AdminPage: React.FC = () => {
         const op = await dataService.obterOperador(session.user.id);
         if (op) {
           if (op.nome) setOperadorNome(op.nome);
+          if (op.role) setOperadorRole(op.role);
+          if (op.status) setOperadorStatus(op.status);
+
+          // Se estiver bloqueado, desloga imediatamente
+          if (op.status === 'bloqueado') {
+            await dataService.fazerLogout();
+            navigate('/login', { replace: true });
+            return;
+          }
+
           if (op.tenda_id) {
             setOperadorTendaId(op.tenda_id);
             // Se já carregou tendas, encontra o nome
@@ -375,6 +403,8 @@ export const AdminPage: React.FC = () => {
             }
           }
         }
+      } else {
+        navigate('/login', { replace: true });
       }
     });
 
@@ -803,6 +833,25 @@ export const AdminPage: React.FC = () => {
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>Relatórios & Praias</span>
               </div>
+            </button>
+
+            <button
+              onClick={() => { setSecaoAtiva('usuarios'); setSidebarAberta(false); }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                secaoAtiva === 'usuarios'
+                  ? 'bg-[#FF6B35] text-white shadow-sm'
+                  : 'text-[#6B7280] hover:bg-[#F9F1E7] hover:text-[#1A1D1F]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Equipe & Usuários</span>
+              </div>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                operadorRole === 'admin' ? 'bg-[#EFF6FF] text-[#0B6EFD]' : 'bg-slate-100 text-[#6B7280]'
+              }`}>
+                {operadoresLista.length}
+              </span>
             </button>
           </nav>
         </div>
@@ -1514,79 +1563,174 @@ export const AdminPage: React.FC = () => {
           {secaoAtiva === 'impressao' && (
             <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-6 animate-in fade-in duration-200">
               
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
                 <div>
                   <h2 className="text-base font-black text-[#1A1D1F] flex items-center gap-2">
                     <Printer className="w-4 h-4 text-[#FF6B35]" />
-                    <span>Folha de Impressão em Lote de Pulseiras</span>
+                    <span>Emissão de Etiquetas & Cartazes para a Orla</span>
                   </h2>
                   <p className="text-xs text-[#6B7280]">
-                    Gere grades de QR Codes prontos para recortar e distribuir nas tendas
+                    Atende ao modelo de alta tiragem econômica (QR Geral) e identificação individual rápida
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <label className="font-bold">Início #:</label>
-                    <input
-                      type="number"
-                      value={loteInicio}
-                      onChange={(e) => setLoteInicio(parseInt(e.target.value) || 1001)}
-                      className="w-16 sm:w-20 p-1.5 border border-[#E5E7EB] rounded-lg text-center font-mono font-bold"
-                    />
-                  </div>
+                {/* Seletor de Modelo de Impressão */}
+                <div className="flex items-center gap-2 bg-[#F9FAFB] p-1.5 rounded-xl border border-[#E5E7EB]">
+                  <button
+                    onClick={() => setTipoImpressao('individual')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      tipoImpressao === 'individual'
+                        ? 'bg-[#FF6B35] text-white shadow-sm'
+                        : 'text-[#6B7280] hover:text-[#1A1D1F]'
+                    }`}
+                  >
+                    Pulseiras com QR Individual
+                  </button>
+                  <button
+                    onClick={() => setTipoImpressao('geral')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      tipoImpressao === 'geral'
+                        ? 'bg-[#0B6EFD] text-white shadow-sm'
+                        : 'text-[#6B7280] hover:text-[#1A1D1F]'
+                    }`}
+                  >
+                    Cartazes de Quiosque (QR Geral)
+                  </button>
+                </div>
 
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <label className="font-bold">Qtd:</label>
-                    <select
-                      value={loteQuantidade}
-                      onChange={(e) => setLoteQuantidade(parseInt(e.target.value))}
-                      className="p-1.5 border border-[#E5E7EB] rounded-lg bg-white font-bold text-xs"
-                    >
-                      <option value={6}>6 un</option>
-                      <option value={12}>12 un</option>
-                      <option value={24}>24 un</option>
-                    </select>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {tipoImpressao === 'individual' ? (
+                    <>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <label className="font-bold">Início #:</label>
+                        <input
+                          type="number"
+                          value={loteInicio}
+                          onChange={(e) => setLoteInicio(parseInt(e.target.value) || 1001)}
+                          className="w-16 sm:w-20 p-1.5 border border-[#E5E7EB] rounded-lg text-center font-mono font-bold"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <label className="font-bold">Qtd:</label>
+                        <select
+                          value={loteQuantidade}
+                          onChange={(e) => setLoteQuantidade(parseInt(e.target.value))}
+                          className="p-1.5 border border-[#E5E7EB] rounded-lg bg-white font-bold text-xs"
+                        >
+                          <option value={6}>6 un</option>
+                          <option value={12}>12 un</option>
+                          <option value={24}>24 un</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs text-[#6B7280] font-semibold">
+                      Pronto para impressão em formato A4
+                    </div>
+                  )}
 
                   <button
                     onClick={() => window.print()}
                     className="inline-flex items-center gap-1.5 bg-[#FF6B35] hover:bg-[#E8531F] text-white text-xs font-bold px-3 sm:px-4 py-2 rounded-xl shadow transition-colors"
                   >
                     <Printer className="w-4 h-4" />
-                    <span className="hidden xs:inline">Imprimir</span>
+                    <span className="hidden xs:inline">Imprimir Folha</span>
                   </button>
                 </div>
               </div>
 
-              {/* Grade de Impressão Responsiva */}
-              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
-                {Array.from({ length: loteQuantidade }).map((_, i) => {
-                  const num = String(loteInicio + i);
-                  const qrUrl = `${window.location.origin}/alerta?pulseira=${num}`;
+              {/* MODO A: Grade de Pulseiras Individuais */}
+              {tipoImpressao === 'individual' && (
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
+                  {Array.from({ length: loteQuantidade }).map((_, i) => {
+                    const num = String(loteInicio + i);
+                    const qrUrl = `${window.location.origin}/alerta?pulseira=${num}`;
 
-                  return (
-                    <div key={num} className="bg-white p-3 rounded-2xl border-2 border-dashed border-[#E5E7EB] text-center space-y-2 flex flex-col items-center justify-center overflow-hidden">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-[#FF6B35]">
-                        ANJOS DA PRAIA
+                    return (
+                      <div key={num} className="bg-white p-3 rounded-2xl border-2 border-dashed border-[#E5E7EB] text-center space-y-2 flex flex-col items-center justify-center overflow-hidden">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-[#FF6B35]">
+                          ANJOS DA PRAIA
+                        </div>
+                        <div className="p-2 bg-white rounded-xl shadow-inner border border-[#E5E7EB] flex items-center justify-center max-w-full">
+                          <QRCodeSVG 
+                            value={qrUrl} 
+                            className="w-24 h-24 sm:w-28 sm:h-28 max-w-full" 
+                            level="M" 
+                          />
+                        </div>
+                        <div className="text-base font-black font-mono text-[#1A1D1F]">
+                          #{num}
+                        </div>
+                        <div className="text-[9px] text-[#6B7280] leading-tight max-w-[180px]">
+                          Aponte a câmera em caso de emergência
+                        </div>
                       </div>
-                      <div className="p-2 bg-white rounded-xl shadow-inner border border-[#E5E7EB] flex items-center justify-center max-w-full">
-                        <QRCodeSVG 
-                          value={qrUrl} 
-                          className="w-24 h-24 sm:w-28 sm:h-28 max-w-full"
-                          level="M" 
-                        />
-                      </div>
-                      <div className="text-base font-black font-mono text-[#1A1D1F]">
-                        #{num}
-                      </div>
-                      <div className="text-[9px] text-[#6B7280] leading-tight max-w-[180px]">
-                        Aponte a câmera em caso de emergência
-                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* MODO B: Cartazes / Totens de Praia com QR Code Geral (Requisito 3 do Edital) */}
+              {tipoImpressao === 'geral' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
+                  {/* Cartaz para Quiosque / Posto de Salva-Vidas */}
+                  <div className="bg-white p-6 rounded-2xl border-2 border-[#FF6B35] text-center space-y-4 shadow-sm flex flex-col items-center">
+                    <div className="inline-block bg-[#FFF5F1] text-[#FF6B35] text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-[#FFD8C7]">
+                      POSTO DE APOIO & QUIOSQUES DA PRAIA
                     </div>
-                  );
-                })}
-              </div>
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1D1F]">
+                        CRIANÇA PERDIDA NA PRAIA?
+                      </h3>
+                      <p className="text-xs text-[#6B7280] mt-1">
+                        Aponte a câmera para o QR Code abaixo e acione os Anjos da Praia
+                      </p>
+                    </div>
+                    <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#FF6B35] shadow-sm">
+                      <QRCodeSVG 
+                        value={`${window.location.origin}/alerta`} 
+                        className="w-40 h-40" 
+                        level="Q" 
+                      />
+                    </div>
+                    <div className="bg-[#EFF6FF] border border-[#BFDBFE] p-2.5 rounded-xl text-xs text-[#1D4ED8] max-w-sm">
+                      <strong>Como funciona:</strong> Ao escanear, o banhista digita o número gravado no braço da criança e envia a localização em 1 toque.
+                    </div>
+                    <div className="text-[10px] text-[#6B7280] font-semibold">
+                      Parceria CBMES • Prefeitura Municipal de Guarapari
+                    </div>
+                  </div>
+
+                  {/* Cartaz Informativo para Famílias */}
+                  <div className="bg-white p-6 rounded-2xl border-2 border-[#0B6EFD] text-center space-y-4 shadow-sm flex flex-col items-center">
+                    <div className="inline-block bg-[#EFF6FF] text-[#0B6EFD] text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-[#BFDBFE]">
+                      ORIENTAÇÃO ÀS FAMÍLIAS
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1D1F]">
+                        PROTEJA SEU FILHO NA AREIA
+                      </h3>
+                      <p className="text-xs text-[#6B7280] mt-1">
+                        Cadastre a pulseira gratuita nos postos da Associação Anjos da Praia
+                      </p>
+                    </div>
+                    <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#0B6EFD] shadow-sm">
+                      <QRCodeSVG 
+                        value={`${window.location.origin}/alerta`} 
+                        className="w-40 h-40" 
+                        level="Q" 
+                      />
+                    </div>
+                    <div className="bg-[#FEF3C7] border border-[#FDE68A] p-2.5 rounded-xl text-xs text-[#92400E] max-w-sm">
+                      <strong>Dica de Segurança:</strong> Ao chegar à praia, mostre à criança o posto dos salva-vidas e os voluntários uniformizados.
+                    </div>
+                    <div className="text-[10px] text-[#6B7280] font-semibold">
+                      Associação Anjos da Praia • Guarapari - ES
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
@@ -1699,6 +1843,169 @@ export const AdminPage: React.FC = () => {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ===================================================== */}
+          {/* SEÇÃO 7: 🛡️ EQUIPE & USUÁRIOS (ADMINISTRAÇÃO DE OPERADORES) */}
+          {/* ===================================================== */}
+          {secaoAtiva === 'usuarios' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              
+              {/* Header de Gestão de Usuários */}
+              <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-[#FF6B35]" />
+                    <h2 className="text-base font-black text-[#1A1D1F]">
+                      Gestão de Equipe & Controle de Acesso
+                    </h2>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0B6EFD]">
+                      {operadoresLista.length} Integrantes
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#6B7280] mt-1">
+                    Atende aos requisitos de administração de operadores, níveis de acesso e conformidade LGPD da maratona
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1.5 rounded-xl bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-xs font-bold flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Chave de Cadastro:</span>
+                    <span className="font-mono uppercase bg-white px-2 py-0.5 rounded border border-[#FCD34D]">
+                      {dataService.CODIGO_AUTORIZACAO_OFICIAL}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabela de Operadores */}
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#1A1D1F]">Operadores e Coordenadores Cadastrados</span>
+                  <span className="text-[11px] text-[#6B7280]">
+                    Seu perfil atual: <strong className="uppercase text-[#0B6EFD]">{operadorRole}</strong>
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-[#1A1D1F]">
+                    <thead className="bg-[#F9FAFB] text-[#6B7280] uppercase text-[10px] tracking-wider border-b border-[#E5E7EB]">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">Nome do Operador</th>
+                        <th className="py-3 px-4 font-bold">E-mail</th>
+                        <th className="py-3 px-4 font-bold">Posto / Tenda</th>
+                        <th className="py-3 px-4 font-bold">Nível de Acesso</th>
+                        <th className="py-3 px-4 font-bold">Status</th>
+                        <th className="py-3 px-4 font-bold text-right">Ações de Moderação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB]">
+                      {operadoresLista.map((op) => {
+                        const tendaVinculada = tendas.find(t => t.id === op.tenda_id);
+                        const isVoce = op.id === operadorUserId;
+                        const isBloqueado = op.status === 'bloqueado';
+
+                        return (
+                          <tr key={op.id} className={`hover:bg-[#F9FAFB] transition-colors ${isBloqueado ? 'bg-red-50/50' : ''}`}>
+                            <td className="py-3.5 px-4 font-bold">
+                              <div className="flex items-center gap-2">
+                                <span>{op.nome}</span>
+                                {isVoce && (
+                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#DCFCE7] text-[#15803D]">
+                                    Você
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-slate-600">
+                              {op.email || '-'}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
+                                <Tent className="w-3.5 h-3.5 text-[#FF6B35]" />
+                                <span>{tendaVinculada?.nome || 'Nenhum posto fixo'}</span>
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                op.role === 'admin'
+                                  ? 'bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE]'
+                                  : 'bg-slate-100 text-[#475569] border border-slate-200'
+                              }`}>
+                                {op.role === 'admin' ? '⭐ Coordenador Geral' : 'Voluntário / Posto'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {isBloqueado ? (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEE2E2] text-[#DC2626] border border-[#FECACA]">
+                                  Bloqueado
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0]">
+                                  Ativo
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {operadorRole === 'admin' ? (
+                                isVoce ? (
+                                  <span className="text-[11px] text-slate-400 italic">Sua conta</span>
+                                ) : (
+                                  <div className="flex items-center justify-end gap-2">
+                                    {/* Alternar Role */}
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const novoRole = op.role === 'admin' ? 'operador' : 'admin';
+                                          await dataService.atualizarOperador(op.id, { role: novoRole });
+                                          showToast(`Nível de ${op.nome} alterado para ${novoRole}!`, 'sucesso');
+                                          carregarDados();
+                                        } catch (e: any) {
+                                          showToast('Erro ao atualizar permissão: ' + e.message, 'erro');
+                                        }
+                                      }}
+                                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#E5E7EB] hover:bg-slate-100 text-[#0B6EFD]"
+                                      title="Alternar entre Coordenador e Operador"
+                                    >
+                                      {op.role === 'admin' ? 'Tornar Operador' : 'Promover a Coordenador'}
+                                    </button>
+
+                                    {/* Alternar Status Bloqueado / Ativo */}
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const novoStatus = isBloqueado ? 'ativo' : 'bloqueado';
+                                          await dataService.atualizarOperador(op.id, { status: novoStatus });
+                                          showToast(`Acesso de ${op.nome} foi ${isBloqueado ? 'reativado' : 'bloqueado'}!`, 'sucesso');
+                                          carregarDados();
+                                        } catch (e: any) {
+                                          showToast('Erro ao moderar usuário: ' + e.message, 'erro');
+                                        }
+                                      }}
+                                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-colors ${
+                                        isBloqueado
+                                          ? 'border-green-300 text-green-700 hover:bg-green-50'
+                                          : 'border-red-300 text-red-700 hover:bg-red-50'
+                                      }`}
+                                    >
+                                      {isBloqueado ? 'Reativar Acesso' : 'Bloquear Acesso'}
+                                    </button>
+                                  </div>
+                                )
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">Exclusivo para Coordenadores</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
