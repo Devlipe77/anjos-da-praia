@@ -565,7 +565,11 @@ export const dataService = {
       .single();
 
     if (error) throw error;
-    return data;
+    const item: any = data;
+    return {
+      ...item,
+      tenda: Array.isArray(item?.tendas) ? item?.tendas[0] : (item?.tendas || item?.tenda)
+    };
   },
 
   async listarConvites(): Promise<ConviteOperador[]> {
@@ -575,7 +579,10 @@ export const dataService = {
         .select('*, tendas(*)')
         .order('criado_em', { ascending: false });
       if (error) return [];
-      return data || [];
+      return (data || []).map((item: any) => ({
+        ...item,
+        tenda: Array.isArray(item.tendas) ? item.tendas[0] : (item.tendas || item.tenda)
+      }));
     } catch {
       return [];
     }
@@ -592,7 +599,7 @@ export const dataService = {
     try {
       const { data, error } = await supabase
         .from('convites_operador')
-        .select('*')
+        .select('*, tendas(*)')
         .eq('codigo', limpo)
         .maybeSingle();
 
@@ -612,7 +619,14 @@ export const dataService = {
         return { valido: false, mensagem: 'Este convite já atingiu o limite máximo de utilizações.' };
       }
 
-      return { valido: true, convite: data };
+      const item: any = data;
+      return { 
+        valido: true, 
+        convite: {
+          ...item,
+          tenda: Array.isArray(item.tendas) ? item.tendas[0] : (item.tendas || item.tenda)
+        } 
+      };
     } catch (err: any) {
       return { valido: false, mensagem: 'Erro ao consultar convite: ' + err.message };
     }

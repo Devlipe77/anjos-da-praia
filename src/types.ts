@@ -49,6 +49,7 @@ export interface ConviteOperador {
   expira_em: string;
   criado_em?: string;
   tenda?: Tenda;
+  tendas?: Tenda | Tenda[];
 }
 
 export interface PulseiraCadastro {

@@ -42,6 +42,16 @@ export const LoginPage: React.FC = () => {
     if (conviteUrl) {
       setCodigoAutorizacao(conviteUrl.toUpperCase());
       setTab('cadastro');
+      dataService.validarConvite(conviteUrl).then((res) => {
+        if (res.valido && res.convite) {
+          if (res.convite.tenda_id) {
+            setTendaId(res.convite.tenda_id);
+          }
+          if (res.convite.role) {
+            setRoleOperador(res.convite.role);
+          }
+        }
+      });
     }
   }, [conviteUrl]);
 
@@ -56,9 +66,7 @@ export const LoginPage: React.FC = () => {
     // Carregar lista de tendas para vincular o operador
     dataService.listarTendas().then((lista) => {
       setTendas(lista);
-      if (lista.length > 0) {
-        setTendaId(lista[0].id || '');
-      }
+      setTendaId(prev => prev || (lista.length > 0 ? lista[0].id || '' : ''));
     });
   }, [navigate]);
 

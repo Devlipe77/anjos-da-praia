@@ -25,6 +25,7 @@ import {
   Tent,
   AlertTriangle,
   User as UserIcon,
+  UserCheck,
   Check,
   Flame,
   Crosshair,
@@ -923,11 +924,35 @@ export const AdminPage: React.FC = () => {
         {/* Rodapé do Operador Logado */}
         <div className="p-4 border-t border-[#E5E7EB] bg-[#F9FAFB]">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[#0B6EFD] text-white flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-full bg-[#0B6EFD] text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
               <UserIcon className="w-4 h-4" />
             </div>
-            <div className="truncate flex-1">
-              <div className="text-xs font-bold text-[#1A1D1F] truncate">{operadorNome}</div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-bold text-[#1A1D1F] truncate" title={operadorNome}>
+                  {operadorNome}
+                </span>
+                <span 
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold text-white shadow-xs flex-shrink-0 tracking-wide ${
+                    operadorRole === 'admin' 
+                      ? 'bg-[#0B6EFD]' 
+                      : 'bg-slate-600'
+                  }`}
+                  title={operadorRole === 'admin' ? 'Perfil: Coordenador Geral' : 'Perfil: Voluntário / Operador'}
+                >
+                  {operadorRole === 'admin' ? (
+                    <>
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      <span>Coordenador</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-2.5 h-2.5" />
+                      <span>Voluntário</span>
+                    </>
+                  )}
+                </span>
+              </div>
               <div className="text-[10px] text-[#6B7280] truncate">{operadorEmail}</div>
             </div>
           </div>
@@ -1941,7 +1966,14 @@ export const AdminPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   {operadorRole === 'admin' && (
                     <button
-                      onClick={() => setModalNovoConvite(true)}
+                      onClick={() => {
+                        setFormConviteTendaId('');
+                        setFormConviteValidadeHoras(24);
+                        setFormConviteRole('operador');
+                        setFormConviteUsos(1);
+                        setConviteGeradoRecente(null);
+                        setModalNovoConvite(true);
+                      }}
                       className="px-4 py-2.5 rounded-xl bg-[#0B6EFD] hover:bg-[#0857CC] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
                     >
                       <Ticket className="w-4 h-4" />
@@ -2142,7 +2174,18 @@ export const AdminPage: React.FC = () => {
                                   {conv.codigo}
                                 </td>
                                 <td className="py-3 px-4">
-                                  {conv.tenda?.nome || 'Qualquer tenda'}
+                                  {(() => {
+                                    const tendaVinculada = tendas.find(t => t.id === conv.tenda_id) || conv.tenda || (Array.isArray((conv as any).tendas) ? (conv as any).tendas[0] : (conv as any).tendas);
+                                    if (tendaVinculada?.nome) {
+                                      return (
+                                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-800">
+                                          <Tent className="w-3.5 h-3.5 text-[#FF6B35]" />
+                                          <span>{tendaVinculada.nome}</span>
+                                        </span>
+                                      );
+                                    }
+                                    return <span className="text-slate-400 italic">Qualquer tenda</span>;
+                                  })()}
                                 </td>
                                 <td className="py-3 px-4 uppercase text-[10px] font-bold">
                                   {conv.role || 'operador'}
@@ -3154,6 +3197,18 @@ export const AdminPage: React.FC = () => {
                   <div className="text-[11px] text-emerald-800">
                     Válido até {new Date(conviteGeradoRecente.expira_em).toLocaleString('pt-BR')} ({conviteGeradoRecente.usos_maximos} uso(s))
                   </div>
+                  {(() => {
+                    const tVinculada = tendas.find(t => t.id === conviteGeradoRecente.tenda_id) || conviteGeradoRecente.tenda;
+                    if (tVinculada?.nome) {
+                      return (
+                        <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 rounded-full text-emerald-900 font-bold text-xs border border-emerald-300 shadow-xs">
+                          <Tent className="w-3.5 h-3.5 text-[#FF6B35]" />
+                          <span>Posto: {tVinculada.nome}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-1">
