@@ -87,16 +87,19 @@ export const AdminPage: React.FC = () => {
 
   // Filtros Operacionais de Monitoramento & Mapa
   const [filtroMonitorStatus, setFiltroMonitorStatus] = useState<'todos' | 'ativos' | 'concluidos'>('ativos');
+  const [filtroMonitorSituacao, setFiltroMonitorSituacao] = useState<string>('todas');
   const [filtroMonitorTendaId, setFiltroMonitorTendaId] = useState<string>('todas');
   const [filtroMonitorBusca, setFiltroMonitorBusca] = useState<string>('');
 
   // Filtros do Dashboard
   const [filtroDashTendaId, setFiltroDashTendaId] = useState<string>('todas');
   const [filtroDashStatus, setFiltroDashStatus] = useState<'todos' | 'ativos' | 'concluidos'>('todos');
+  const [filtroDashSituacao, setFiltroDashSituacao] = useState<string>('todas');
 
   // Filtros da Tela de Relatórios
   const [filtroRelatorioPraia, setFiltroRelatorioPraia] = useState<string>('todas');
   const [filtroRelatorioStatus, setFiltroRelatorioStatus] = useState<'todos' | 'ativos' | 'concluidos'>('todos');
+  const [filtroRelatorioSituacao, setFiltroRelatorioSituacao] = useState<string>('todas');
   const [filtroRelatorioPeriodo, setFiltroRelatorioPeriodo] = useState<'tudo' | 'hoje' | '7dias' | '30dias'>('tudo');
   const [filtroRelatorioBusca, setFiltroRelatorioBusca] = useState<string>('');
 
@@ -530,6 +533,9 @@ export const AdminPage: React.FC = () => {
       if (filtroMonitorStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
       if (filtroMonitorStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
 
+      // Filtro de Situação / Etapa
+      if (filtroMonitorSituacao !== 'todas' && o.status !== filtroMonitorSituacao) return false;
+
       // Filtro de Tenda
       if (filtroMonitorTendaId !== 'todas') {
         const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
@@ -548,7 +554,7 @@ export const AdminPage: React.FC = () => {
 
       return true;
     });
-  }, [ocorrencias, filtroMonitorStatus, filtroMonitorTendaId, filtroMonitorBusca]);
+  }, [ocorrencias, filtroMonitorStatus, filtroMonitorSituacao, filtroMonitorTendaId, filtroMonitorBusca]);
 
   // 2. Ocorrências Filtradas no Dashboard
   const ocorrenciasDashboard = useMemo(() => {
@@ -556,13 +562,16 @@ export const AdminPage: React.FC = () => {
       if (filtroDashStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
       if (filtroDashStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
 
+      // Filtro de Situação / Etapa
+      if (filtroDashSituacao !== 'todas' && o.status !== filtroDashSituacao) return false;
+
       if (filtroDashTendaId !== 'todas') {
         const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
         if (tendaIdOco !== filtroDashTendaId) return false;
       }
       return true;
     });
-  }, [ocorrencias, filtroDashStatus, filtroDashTendaId]);
+  }, [ocorrencias, filtroDashStatus, filtroDashSituacao, filtroDashTendaId]);
 
   // KPIs do Dashboard Reativos ao Filtro de Tenda
   const dashCadastrosCount = useMemo(() => {
@@ -592,6 +601,9 @@ export const AdminPage: React.FC = () => {
       if (filtroRelatorioStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
       if (filtroRelatorioStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
 
+      // Filtro de Situação / Etapa
+      if (filtroRelatorioSituacao !== 'todas' && o.status !== filtroRelatorioSituacao) return false;
+
       // Filtro de Período
       if (filtroRelatorioPeriodo !== 'tudo') {
         const dataOco = new Date(o.horario_alerta).getTime();
@@ -613,7 +625,7 @@ export const AdminPage: React.FC = () => {
 
       return true;
     });
-  }, [ocorrencias, filtroRelatorioPraia, filtroRelatorioStatus, filtroRelatorioPeriodo, filtroRelatorioBusca]);
+  }, [ocorrencias, filtroRelatorioPraia, filtroRelatorioStatus, filtroRelatorioSituacao, filtroRelatorioPeriodo, filtroRelatorioBusca]);
 
   // Submeter nova pulseira
   const handleCadastrarPulseira = async (e: React.FormEvent) => {
@@ -1101,7 +1113,6 @@ export const AdminPage: React.FC = () => {
               {secaoAtiva === 'tendas' && 'Postos de Atendimento'}
               {secaoAtiva === 'impressao' && 'Emissão de Pulseiras'}
               {secaoAtiva === 'relatorios' && 'Relatórios e Indicadores'}
-              {secaoAtiva === 'usuarios' && 'Controle de Acesso e Equipe'}
             </h1>
           </div>
 
@@ -1222,7 +1233,7 @@ export const AdminPage: React.FC = () => {
                     <select
                       value={filtroDashTendaId}
                       onChange={(e) => setFiltroDashTendaId(e.target.value)}
-                      className="text-xs font-bold py-1.5 pl-3 pr-7 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] appearance-none cursor-pointer"
+                      className="text-xs font-bold py-1.5 pl-3 pr-7 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
                     >
                       <option value="todas">📍 Toda Guarapari (Geral)</option>
                       {operadorTendaId && (
@@ -1231,6 +1242,23 @@ export const AdminPage: React.FC = () => {
                       {tendas.map(t => (
                         <option key={t.id} value={t.id}>{t.nome} ({t.praia})</option>
                       ))}
+                    </select>
+                  </div>
+
+                  {/* Seletor de Situação / Etapa */}
+                  <div className="relative">
+                    <select
+                      value={filtroDashSituacao}
+                      onChange={(e) => setFiltroDashSituacao(e.target.value)}
+                      className="text-xs font-bold py-1.5 px-3 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
+                      title="Filtrar por etapa ou situação da ocorrência"
+                    >
+                      <option value="todas">📋 Todas as Situações</option>
+                      <option value="Criança localizada">🚨 Criança localizada</option>
+                      <option value="Equipe a caminho">🏃 Equipe a caminho</option>
+                      <option value="Criança recebida">🏢 Criança recebida na tenda</option>
+                      <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                      <option value="Reencontro realizado">🎉 Reencontro realizado</option>
                     </select>
                   </div>
 
@@ -1261,6 +1289,19 @@ export const AdminPage: React.FC = () => {
                       ✅ Concluídos
                     </button>
                   </div>
+
+                  {(filtroDashTendaId !== 'todas' || filtroDashStatus !== 'todos' || filtroDashSituacao !== 'todas') && (
+                    <button
+                      onClick={() => {
+                        setFiltroDashTendaId('todas');
+                        setFiltroDashStatus('todos');
+                        setFiltroDashSituacao('todas');
+                      }}
+                      className="text-xs font-bold text-[#DC2626] hover:underline px-1"
+                    >
+                      Limpar
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1475,12 +1516,12 @@ export const AdminPage: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Pílulas de Status */}
-                  <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100">
-                    <div className="flex gap-1">
+                  {/* Linha 2: Pílulas de Status e Filtro de Situação */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         onClick={() => setFiltroMonitorStatus('ativos')}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                           filtroMonitorStatus === 'ativos'
                             ? 'bg-[#FF6B35] text-white shadow-xs'
                             : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
@@ -1490,7 +1531,7 @@ export const AdminPage: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setFiltroMonitorStatus('concluidos')}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                           filtroMonitorStatus === 'concluidos'
                             ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
@@ -1500,7 +1541,7 @@ export const AdminPage: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setFiltroMonitorStatus('todos')}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                        className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
                           filtroMonitorStatus === 'todos'
                             ? 'bg-slate-800 text-white shadow-xs'
                             : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
@@ -1508,18 +1549,34 @@ export const AdminPage: React.FC = () => {
                       >
                         Todos
                       </button>
+
+                      {/* Filtro por Situação / Etapa */}
+                      <select
+                        value={filtroMonitorSituacao}
+                        onChange={(e) => setFiltroMonitorSituacao(e.target.value)}
+                        className="text-xs font-bold py-1.5 px-2 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#FF6B35] text-[#1A1D1F] cursor-pointer"
+                        title="Filtrar por etapa ou situação da ocorrência"
+                      >
+                        <option value="todas">📋 Todas as Situações</option>
+                        <option value="Criança localizada">🚨 Criança localizada</option>
+                        <option value="Equipe a caminho">🏃 Equipe a caminho</option>
+                        <option value="Criança recebida">🏢 Criança recebida na tenda</option>
+                        <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                        <option value="Reencontro realizado">🎉 Reencontro realizado</option>
+                      </select>
                     </div>
 
-                    {(filtroMonitorStatus !== 'ativos' || filtroMonitorTendaId !== 'todas' || filtroMonitorBusca) && (
+                    {(filtroMonitorStatus !== 'ativos' || filtroMonitorSituacao !== 'todas' || filtroMonitorTendaId !== 'todas' || filtroMonitorBusca) && (
                       <button
                         onClick={() => {
                           setFiltroMonitorStatus('ativos');
+                          setFiltroMonitorSituacao('todas');
                           setFiltroMonitorTendaId('todas');
                           setFiltroMonitorBusca('');
                         }}
-                        className="text-[10px] font-bold text-[#DC2626] hover:underline"
+                        className="text-xs font-bold text-[#DC2626] hover:underline px-1"
                       >
-                        Limpar
+                        Limpar Filtros
                       </button>
                     )}
                   </div>
@@ -2130,11 +2187,12 @@ export const AdminPage: React.FC = () => {
                     <Filter className="w-4 h-4 text-[#0B6EFD]" />
                     <span className="text-xs font-black text-[#1A1D1F]">Filtros do Relatório & Auditoria</span>
                   </div>
-                  {(filtroRelatorioPraia !== 'todas' || filtroRelatorioStatus !== 'todos' || filtroRelatorioPeriodo !== 'tudo' || filtroRelatorioBusca) && (
+                  {(filtroRelatorioPraia !== 'todas' || filtroRelatorioStatus !== 'todos' || filtroRelatorioSituacao !== 'todas' || filtroRelatorioPeriodo !== 'tudo' || filtroRelatorioBusca) && (
                     <button
                       onClick={() => {
                         setFiltroRelatorioPraia('todas');
                         setFiltroRelatorioStatus('todos');
+                        setFiltroRelatorioSituacao('todas');
                         setFiltroRelatorioPeriodo('tudo');
                         setFiltroRelatorioBusca('');
                       }}
@@ -2145,7 +2203,7 @@ export const AdminPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {/* Busca por Texto */}
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-[#6B7280] absolute left-3 top-3" />
@@ -2182,6 +2240,23 @@ export const AdminPage: React.FC = () => {
                       <option value="todos">⚡ Todos os Status</option>
                       <option value="ativos">🔥 Apenas Chamados em Aberto</option>
                       <option value="concluidos">✅ Apenas Reencontros Concluídos</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro por Situação / Etapa */}
+                  <div>
+                    <select
+                      value={filtroRelatorioSituacao}
+                      onChange={(e) => setFiltroRelatorioSituacao(e.target.value)}
+                      className="w-full p-2 text-xs font-bold rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
+                      title="Filtrar por situação da ocorrência"
+                    >
+                      <option value="todas">📋 Todas as Situações</option>
+                      <option value="Criança localizada">🚨 Criança localizada</option>
+                      <option value="Equipe a caminho">🏃 Equipe a caminho</option>
+                      <option value="Criança recebida">🏢 Criança recebida na tenda</option>
+                      <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                      <option value="Reencontro realizado">🎉 Reencontro realizado</option>
                     </select>
                   </div>
 
