@@ -239,29 +239,89 @@ export const AdminPage: React.FC = () => {
   const [appJaInstalado, setAppJaInstalado] = useState(false);
 
   useEffect(() => {
-    // Detectar se já está em modo standalone
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (isStandalone) {
+    // 1. Verificar se já foi marcado como instalado no localStorage
+    const salvoInstalado = localStorage.getItem('anjos_da_praia_pwa_instalado') === 'true';
+    if (salvoInstalado) {
       setAppJaInstalado(true);
     }
 
+    // 2. Detectar se a janela atual está rodando como PWA (standalone, fullscreen ou minimal-ui)
+    const checkDisplayMode = () => {
+      const isStandalone = 
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches ||
+        window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://');
+
+      if (isStandalone) {
+        setAppJaInstalado(true);
+        localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
+      }
+    };
+
+    checkDisplayMode();
+
+    // 3. API nativa moderna de navegadores Chromium (Edge e Chrome): getInstalledRelatedApps()
+    if ('getInstalledRelatedApps' in navigator) {
+      (navigator as any).getInstalledRelatedApps().then((relatedApps: any[]) => {
+        if (relatedApps && relatedApps.length > 0) {
+          setAppJaInstalado(true);
+          localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
+        }
+      }).catch(() => {
+        // Silencioso se bloqueado por permissão
+      });
+    }
+
+    // 4. Ouvir mudança de display-mode dinamicamente
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setAppJaInstalado(true);
+        localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
+      }
+    };
+    try {
+      mediaQuery.addEventListener('change', handleDisplayModeChange);
+    } catch {
+      // Fallback para navegadores antigos
+      mediaQuery.addListener(handleDisplayModeChange);
+    }
+
+    // 5. Evento beforeinstallprompt: Disparado pelo navegador quando o app PODE ser instalado
+    // Se o app já estiver instalado no SO, os navegadores modernos NÃO disparam este evento
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setPwaInstalavel(true);
+      // Se disparou prompt, o app ainda não está instalado no navegador
+      setAppJaInstalado(false);
+      localStorage.removeItem('anjos_da_praia_pwa_instalado');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    window.addEventListener('appinstalled', () => {
+    // 6. Evento disparado quando a instalação é concluída
+    const handleAppInstalled = () => {
       setPwaInstalavel(false);
       setDeferredPrompt(null);
       setAppJaInstalado(true);
+      localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
       showToast('Aplicativo Anjos da Praia instalado com sucesso!', 'sucesso');
-    });
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      try {
+        mediaQuery.removeEventListener('change', handleDisplayModeChange);
+      } catch {
+        mediaQuery.removeListener(handleDisplayModeChange);
+      }
     };
   }, []);
 
