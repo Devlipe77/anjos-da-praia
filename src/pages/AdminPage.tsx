@@ -239,14 +239,8 @@ export const AdminPage: React.FC = () => {
   const [appJaInstalado, setAppJaInstalado] = useState(false);
 
   useEffect(() => {
-    // 1. Verificar se já foi marcado como instalado no localStorage
-    const salvoInstalado = localStorage.getItem('anjos_da_praia_pwa_instalado') === 'true';
-    if (salvoInstalado) {
-      setAppJaInstalado(true);
-    }
-
-    // 2. Detectar se a janela atual está rodando como PWA (standalone, fullscreen ou minimal-ui)
-    const checkDisplayMode = () => {
+    // 1. Detectar se a janela atual JÁ está rodando no modo aplicativo PWA instalado
+    const checkIsRunningStandalone = () => {
       const isStandalone = 
         window.matchMedia('(display-mode: standalone)').matches ||
         window.matchMedia('(display-mode: fullscreen)').matches ||
@@ -257,58 +251,39 @@ export const AdminPage: React.FC = () => {
 
       if (isStandalone) {
         setAppJaInstalado(true);
-        localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
       }
     };
 
-    checkDisplayMode();
+    checkIsRunningStandalone();
 
-    // 3. API nativa moderna de navegadores Chromium (Edge e Chrome): getInstalledRelatedApps()
-    if ('getInstalledRelatedApps' in navigator) {
-      (navigator as any).getInstalledRelatedApps().then((relatedApps: any[]) => {
-        if (relatedApps && relatedApps.length > 0) {
-          setAppJaInstalado(true);
-          localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
-        }
-      }).catch(() => {
-        // Silencioso se bloqueado por permissão
-      });
-    }
-
-    // 4. Ouvir mudança de display-mode dinamicamente
+    // 2. Ouvir mudança de display-mode dinamicamente (se o usuário abrir o app)
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleDisplayModeChange = (e: MediaQueryListEvent) => {
       if (e.matches) {
         setAppJaInstalado(true);
-        localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
       }
     };
     try {
       mediaQuery.addEventListener('change', handleDisplayModeChange);
     } catch {
-      // Fallback para navegadores antigos
       mediaQuery.addListener(handleDisplayModeChange);
     }
 
-    // 5. Evento beforeinstallprompt: Disparado pelo navegador quando o app PODE ser instalado
-    // Se o app já estiver instalado no SO, os navegadores modernos NÃO disparam este evento
+    // 3. Capturar o evento nativo beforeinstallprompt do Chrome/Edge/Android
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setPwaInstalavel(true);
-      // Se disparou prompt, o app ainda não está instalado no navegador
       setAppJaInstalado(false);
-      localStorage.removeItem('anjos_da_praia_pwa_instalado');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 6. Evento disparado quando a instalação é concluída
+    // 4. Evento disparado imediatamente após a instalação ser concluída no SO
     const handleAppInstalled = () => {
       setPwaInstalavel(false);
       setDeferredPrompt(null);
       setAppJaInstalado(true);
-      localStorage.setItem('anjos_da_praia_pwa_instalado', 'true');
       showToast('Aplicativo Anjos da Praia instalado com sucesso!', 'sucesso');
     };
 
@@ -327,19 +302,29 @@ export const AdminPage: React.FC = () => {
 
   const handleInstalarPWA = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setPwaInstalavel(false);
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          setPwaInstalavel(false);
+          setAppJaInstalado(true);
+        }
+        setDeferredPrompt(null);
+      } catch (err) {
+        console.warn('Erro ao acionar prompt de instalação:', err);
       }
-      setDeferredPrompt(null);
     } else {
-      // Instrução amigável caso o navegador oculte o prompt nativo ou seja iOS
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      // Instrução específica conforme o sistema operacional mobile ou desktop
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua);
+      const isAndroid = /Android/.test(ua);
+
       if (isIOS) {
-        alert('Para instalar no iPhone/iPad:\n1. Toque no botão Compartilhar (quadrado com seta para cima)\n2. Role para baixo e selecione "Adicionar à Tela de Início".');
+        alert('Para instalar no iPhone/iPad:\n1. Toque no botão "Compartilhar" (ícone de quadrado com seta para cima no Safari)\n2. Role para baixo e toque em "Adicionar à Tela de Início" (+).');
+      } else if (isAndroid) {
+        alert('Para instalar no Android:\n1. Toque nos três pontinhos (⋮) no canto superior do Chrome\n2. Selecione "Instalar aplicativo" ou "Adicionar à tela inicial".');
       } else {
-        alert('Para instalar no Chrome/Edge:\n1. Clique no ícone de computador/instalação no canto superior direito da barra de endereços (ou nos três pontinhos "⋮" > "Instalar Anjos da Praia").');
+        alert('Para instalar no Computador (Chrome/Edge):\n1. Clique no ícone de instalação (computadorzinho com seta) na barra de endereços do navegador\n2. Ou clique nos três pontinhos (⋮) > "Instalar Anjos da Praia".');
       }
     }
   };
