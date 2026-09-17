@@ -4,19 +4,42 @@
 -- Atualizado com todas as 5 etapas da operação e histórico auditado
 -- ==========================================================
 
--- 1. Inserção / Atualização de Praias Oficiais de Guarapari
-INSERT INTO praias (nome, regiao, latitude_padrao, longitude_padrao)
-VALUES
-  ('Praia do Morro', 'Norte', -20.6552, -40.4880),
-  ('Praia das Castanheiras', 'Centro', -20.6720, -40.4975),
-  ('Praia dos Namorados', 'Centro', -20.6710, -40.4960),
-  ('Praia da Areia Preta', 'Centro', -20.6765, -40.5005),
-  ('Praia de Meaípe', 'Meaípe', -20.7420, -40.5280),
-  ('Praia de Bacutia', 'Enseada Azul', -20.7180, -40.5210),
-  ('Praia de Peracanga', 'Enseada Azul', -20.7120, -40.5190),
-  ('Praia de Setiba', 'Setiba', -20.6120, -40.4500),
-  ('Praia de Setibão', 'Setiba', -20.6020, -40.4410)
-ON CONFLICT (nome) DO UPDATE SET
+-- 1. Inserção / Atualização Completa de Praias Oficiais de Guarapari (31 Praias)
+INSERT INTO praias (id, nome, regiao, latitude_padrao, longitude_padrao, criado_em) VALUES 
+  ('05564c03-5bab-40b3-b1b1-df2e5b2e82aa', 'Praia da Areia Preta', 'Centro', -20.6765000, -40.5005000, '2026-09-16 02:52:28.164027+00'), 
+  ('13942bfa-678c-4726-9754-a1abda8e3bbe', 'Praia de Ubu (Divisa)', 'Sul', -20.7890000, -40.5750000, '2026-09-16 02:52:28.164027+00'), 
+  ('16456a11-ba40-4822-86ce-23a24f8ae040', 'Praia do Ermitão', 'Morro da Pescaria', -20.6500000, -40.4740000, '2026-09-16 02:52:28.164027+00'), 
+  ('1e82e2fd-c61e-4399-8115-4bff49257185', 'Praia do Riacho', 'Ipiranga', -20.6900000, -40.5120000, '2026-09-16 02:52:28.164027+00'), 
+  ('225c02c0-6782-4b53-b928-748cd38aad77', 'Prainha de Muquiçaba', 'Muquiçaba', -20.6610000, -40.5040000, '2026-09-16 02:52:28.164027+00'), 
+  ('263dffd4-3e92-4d9f-aab9-0a909e70f8b6', 'Praia de Porto Grande', 'Sul', -20.7620000, -40.5420000, '2026-09-16 02:52:28.164027+00'), 
+  ('275217bc-1fbf-43bc-b7e6-d92df9a0e039', 'Praia das Virtudes', 'Centro', -20.6701000, -40.4948000, '2026-09-16 02:52:28.164027+00'), 
+  ('2b818a83-a6e2-4507-b018-1d6a569c39c6', 'Praia da Areia Vermelha', 'Morro da Pescaria', -20.6520000, -40.4760000, '2026-09-16 02:52:28.164027+00'), 
+  ('2f180d0f-e210-4852-9180-4b73c0d31612', 'Praia de Maimbá', 'Sul', -20.7550000, -40.5350000, '2026-09-16 02:52:28.164027+00'), 
+  ('33afd2dd-3a07-415e-bf6c-93128aa68e82', 'Praia de Setibão', 'Setiba', -20.6020000, -40.4410000, '2026-09-16 02:52:28.164027+00'), 
+  ('3c0a0a82-4cf3-4a54-b3da-bbc14f2a713e', 'Praia da Cerca', 'Norte', -20.6480000, -40.4820000, '2026-09-16 02:52:28.164027+00'), 
+  ('42344c89-d266-4ca7-98cd-c618df85ea08', 'Praia de Mucunã', 'Enseada Azul', -20.7095000, -40.5175000, '2026-09-16 02:52:28.164027+00'), 
+  ('4b8ebf4e-d17f-425a-85e9-2ed2ab6c1747', 'Praia de Setiba', 'Setiba', -20.6120000, -40.4500000, '2026-09-16 02:52:28.164027+00'), 
+  ('50984e18-eeb8-429e-882e-e25cf61d92dc', 'Praia de Setiba Pina', 'Setiba', -20.6080000, -40.4460000, '2026-09-16 02:52:28.164027+00'), 
+  ('5f3282f2-ed4a-4997-bd0a-186cf7f89f2c', 'Praia de Una', 'Norte', -20.6297222, -40.4458333, '2026-09-16 02:52:28.164027+00'), 
+  ('6c6be559-32c2-4e14-b084-04c98a95dddb', 'Praia de Mateus Lopes', 'Norte', -20.6360000, -40.4710000, '2026-09-16 02:52:28.164027+00'), 
+  ('6fb4eb93-649f-4599-a38c-ac169b9cff4b', 'Prainha dos Pescadores', 'Morro da Pescaria', -20.6560000, -40.4810000, '2026-09-16 02:52:28.164027+00'), 
+  ('822c697e-1411-4aa0-8d3f-b03ee83596f4', 'Praia das Castanheiras', 'Centro', -20.6720000, -40.4975000, '2026-09-16 02:52:28.164027+00'), 
+  ('8e295970-6350-4ccb-ab55-46dcec8a4264', 'Praia de Peracanga', 'Enseada Azul', -20.7130000, -40.5190000, '2026-09-16 02:52:28.164027+00'), 
+  ('941362e7-e344-4239-89e1-ec2869d2820a', 'Praia do Morro', 'Praia do Morro', -20.6552000, -40.4880000, '2026-09-16 02:52:28.164027+00'), 
+  ('a3098f73-dc5c-43fc-8b0a-faf5676be85a', 'Praia de Bacutia', 'Enseada Azul', -20.7180000, -40.5210000, '2026-09-16 02:52:28.164027+00'), 
+  ('a49b8cde-6c39-4c5e-9eef-7c193ba17956', 'Praia do Meio', 'Centro', -20.6740000, -40.4990000, '2026-09-16 02:52:28.164027+00'), 
+  ('aa130629-1043-40b2-8dee-bde5e652db04', 'Praia de Santa Mônica', 'Santa Mônica', -20.6280000, -40.4680000, '2026-09-16 02:52:28.164027+00'), 
+  ('af74ea41-bdba-4feb-b384-04d0dfab2484', 'Praia dos Padres', 'Enseada Azul', -20.7230000, -40.5240000, '2026-09-16 02:52:28.164027+00'), 
+  ('cb2343a2-1609-4539-8087-3f6af72ebff6', 'Praia dos Adventistas', 'Norte', -20.6330000, -40.4690000, '2026-09-16 02:52:28.164027+00'), 
+  ('d630c5b3-8708-45dc-9e96-839b9f7377ec', 'Praia da Fonte', 'Centro', -20.6715000, -40.4935000, '2026-09-16 02:52:28.164027+00'), 
+  ('d6ca365b-b837-4b6e-a09b-21097cc8d046', 'Praia de Guaibura', 'Enseada Azul', -20.7070000, -40.5160000, '2026-09-16 02:52:28.164027+00'), 
+  ('e4302ca0-e18c-4074-b6da-0317cdcc50ab', 'Praia do Morcego', 'Norte', -20.6410000, -40.4750000, '2026-09-16 02:52:28.164027+00'), 
+  ('eb18ce18-1b04-46f0-a579-5d620424fbc6', 'Praia dos Namorados', 'Centro', -20.6708000, -40.4962000, '2026-09-16 02:52:28.164027+00'), 
+  ('f1be92ef-3f7a-49b4-98da-85966b8828ff', 'Praia de Meaípe', 'Meaípe', -20.7420000, -40.5280000, '2026-09-16 02:52:28.164027+00'), 
+  ('f43c13e4-146f-4ffa-a262-f6499b310c00', 'Praia da Raposa', 'Morro da Pescaria', -20.6540000, -40.4790000, '2026-09-16 02:52:28.164027+00'), 
+  ('fc31e6de-1c58-49b0-82f5-26937f0e828a', 'Três Praias', 'Norte', -20.6380000, -40.4720000, '2026-09-16 02:52:28.164027+00')
+ON CONFLICT (id) DO UPDATE SET
+  nome = EXCLUDED.nome,
   regiao = EXCLUDED.regiao,
   latitude_padrao = EXCLUDED.latitude_padrao,
   longitude_padrao = EXCLUDED.longitude_padrao;
