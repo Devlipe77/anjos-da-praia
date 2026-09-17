@@ -38,6 +38,19 @@ export interface Operador {
   criado_em?: string;
 }
 
+export interface ConviteOperador {
+  id?: string;
+  codigo: string;
+  criado_por?: string | null;
+  tenda_id?: string | null;
+  role?: 'admin' | 'operador';
+  usos_maximos: number;
+  usos_atuais: number;
+  expira_em: string;
+  criado_em?: string;
+  tenda?: Tenda;
+}
+
 export interface PulseiraCadastro {
   id?: string;
   numero_pulseira: string;

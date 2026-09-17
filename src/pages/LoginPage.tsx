@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { 
   LifeBuoy, 
   Lock, 
@@ -10,7 +10,8 @@ import {
   Loader2, 
   ShieldCheck, 
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Ticket
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { Tenda, traduzirErroSupabase } from '../types';
@@ -18,14 +19,17 @@ import { validateEmail } from '@felipe7/valida-form';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'login' | 'cadastro'>('login');
+  const [searchParams] = useSearchParams();
+  const conviteUrl = searchParams.get('convite') || searchParams.get('codigo') || '';
+  
+  const [tab, setTab] = useState<'login' | 'cadastro'>(conviteUrl ? 'cadastro' : 'login');
   
   // Campos
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [tendaId, setTendaId] = useState('');
-  const [codigoAutorizacao, setCodigoAutorizacao] = useState('');
+  const [codigoAutorizacao, setCodigoAutorizacao] = useState(conviteUrl.toUpperCase());
   const [roleOperador, setRoleOperador] = useState<'operador' | 'admin'>('operador');
   const [tendas, setTendas] = useState<Tenda[]>([]);
 
@@ -33,6 +37,13 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (conviteUrl) {
+      setCodigoAutorizacao(conviteUrl.toUpperCase());
+      setTab('cadastro');
+    }
+  }, [conviteUrl]);
 
   // Se já estiver logado, redireciona para o admin
   useEffect(() => {

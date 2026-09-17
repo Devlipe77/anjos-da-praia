@@ -39,10 +39,16 @@ import {
   Laptop,
   ShieldCheck,
   History,
-  Lock
+  Lock,
+  Share2,
+  Copy,
+  KeyRound,
+  Ticket,
+  UserMinus,
+  ShieldAlert
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
-import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia, Operador } from '../types';
+import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia, Operador, ConviteOperador } from '../types';
 import { MapView } from '../components/MapView';
 import { StatusBadge } from '../components/StatusBadge';
 import { QRCodeModal, QRScannerModal } from '../components/QRCodeModal';
@@ -91,6 +97,17 @@ export const AdminPage: React.FC = () => {
 
   // Modal de Linha do Tempo / Histórico de Auditoria da Ocorrência
   const [modalHistoricoOcorrencia, setModalHistoricoOcorrencia] = useState<Ocorrencia | null>(null);
+
+  // Modais de Operadores & Convites
+  const [modalEdicaoOperador, setModalEdicaoOperador] = useState<Operador | null>(null);
+  const [modalExclusaoOperador, setModalExclusaoOperador] = useState<Operador | null>(null);
+  const [modalNovoConvite, setModalNovoConvite] = useState(false);
+  const [convitesLista, setConvitesLista] = useState<ConviteOperador[]>([]);
+  const [formConviteValidadeHoras, setFormConviteValidadeHoras] = useState(24);
+  const [formConviteTendaId, setFormConviteTendaId] = useState('');
+  const [formConviteRole, setFormConviteRole] = useState<'operador' | 'admin'>('operador');
+  const [formConviteUsos, setFormConviteUsos] = useState(1);
+  const [conviteGeradoRecente, setConviteGeradoRecente] = useState<ConviteOperador | null>(null);
 
   // Modal QR Code individual
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -317,12 +334,13 @@ export const AdminPage: React.FC = () => {
   // Carregar dados de produção
   const carregarDados = async (tocarSom = false) => {
     try {
-      const [ocos, cads, tens, ops, prs] = await Promise.all([
+      const [ocos, cads, tens, ops, prs, convs] = await Promise.all([
         dataService.listarOcorrencias(),
         dataService.listarCadastros(),
         dataService.listarTendas(),
         dataService.listarOperadores(),
-        dataService.listarPraias()
+        dataService.listarPraias(),
+        dataService.listarConvites()
       ]);
 
       if (prs && prs.length > 0) {
@@ -353,6 +371,7 @@ export const AdminPage: React.FC = () => {
       setCadastros(cads);
       setTendas(tens);
       setOperadoresLista(ops);
+      setConvitesLista(convs);
 
       // Reconciliar o nome da tenda do operador caso já tenhamos o tenda_id
       if (operadorTendaId) {
@@ -1870,14 +1889,24 @@ export const AdminPage: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-[#6B7280] mt-1">
-                    Atende aos requisitos de administração de operadores, níveis de acesso e conformidade LGPD da maratona
+                    Administre os voluntários, emita links de convite temporários com expiração e gerencie permissões
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-xl bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-xs font-bold flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {operadorRole === 'admin' && (
+                    <button
+                      onClick={() => setModalNovoConvite(true)}
+                      className="px-4 py-2.5 rounded-xl bg-[#0B6EFD] hover:bg-[#0857CC] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+                    >
+                      <Ticket className="w-4 h-4" />
+                      <span>Gerar Link de Convite</span>
+                    </button>
+                  )}
+
+                  <div className="px-3 py-2 rounded-xl bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-xs font-bold flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Chave de Cadastro:</span>
+                    <span>Chave Mestra:</span>
                     <span className="font-mono uppercase bg-white px-2 py-0.5 rounded border border-[#FCD34D]">
                       {dataService.CODIGO_AUTORIZACAO_OFICIAL}
                     </span>
@@ -1885,7 +1914,7 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tabela de Operadores */}
+              {/* Tabela de Operadores com CRUD Completo */}
               <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-between">
                   <span className="text-xs font-bold text-[#1A1D1F]">Operadores e Coordenadores Cadastrados</span>
@@ -1903,7 +1932,7 @@ export const AdminPage: React.FC = () => {
                         <th className="py-3 px-4 font-bold">Posto / Tenda</th>
                         <th className="py-3 px-4 font-bold">Nível de Acesso</th>
                         <th className="py-3 px-4 font-bold">Status</th>
-                        <th className="py-3 px-4 font-bold text-right">Ações de Moderação</th>
+                        <th className="py-3 px-4 font-bold text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E5E7EB]">
@@ -1911,6 +1940,7 @@ export const AdminPage: React.FC = () => {
                         const tendaVinculada = tendas.find(t => t.id === op.tenda_id);
                         const isVoce = op.id === operadorUserId;
                         const isBloqueado = op.status === 'bloqueado';
+                        const isOutroAdmin = op.role === 'admin' && !isVoce;
 
                         return (
                           <tr key={op.id} className={`hover:bg-[#F9FAFB] transition-colors ${isBloqueado ? 'bg-red-50/50' : ''}`}>
@@ -1956,25 +1986,28 @@ export const AdminPage: React.FC = () => {
                             <td className="py-3.5 px-4 text-right">
                               {operadorRole === 'admin' ? (
                                 isVoce ? (
-                                  <span className="text-[11px] text-slate-400 italic">Sua conta</span>
+                                  <button
+                                    onClick={() => setModalEdicaoOperador(op)}
+                                    className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors inline-flex items-center gap-1"
+                                    title="Editar meus dados"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <span>Editar</span>
+                                  </button>
+                                ) : isOutroAdmin ? (
+                                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg" title="Por segurança institucional, um Coordenador não pode excluir ou alterar outro Coordenador">
+                                    🛡️ Coordenador Protegido
+                                  </span>
                                 ) : (
-                                  <div className="flex items-center justify-end gap-2">
-                                    {/* Alternar Role */}
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {/* Editar Operador */}
                                     <button
-                                      onClick={async () => {
-                                        try {
-                                          const novoRole = op.role === 'admin' ? 'operador' : 'admin';
-                                          await dataService.atualizarOperador(op.id, { role: novoRole });
-                                          showToast(`Nível de ${op.nome} alterado para ${novoRole}!`, 'sucesso');
-                                          carregarDados();
-                                        } catch (e: any) {
-                                          showToast('Erro ao atualizar permissão: ' + e.message, 'erro');
-                                        }
-                                      }}
-                                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#E5E7EB] hover:bg-slate-100 text-[#0B6EFD]"
-                                      title="Alternar entre Coordenador e Operador"
+                                      onClick={() => setModalEdicaoOperador(op)}
+                                      className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors inline-flex items-center gap-1"
+                                      title="Editar operador"
                                     >
-                                      {op.role === 'admin' ? 'Tornar Operador' : 'Promover a Coordenador'}
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Editar</span>
                                     </button>
 
                                     {/* Alternar Status Bloqueado / Ativo */}
@@ -1989,18 +2022,27 @@ export const AdminPage: React.FC = () => {
                                           showToast('Erro ao moderar usuário: ' + e.message, 'erro');
                                         }
                                       }}
-                                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-colors ${
+                                      className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-colors ${
                                         isBloqueado
                                           ? 'border-green-300 text-green-700 hover:bg-green-50'
-                                          : 'border-red-300 text-red-700 hover:bg-red-50'
+                                          : 'border-amber-300 text-amber-700 hover:bg-amber-50'
                                       }`}
                                     >
-                                      {isBloqueado ? 'Reativar Acesso' : 'Bloquear Acesso'}
+                                      {isBloqueado ? 'Reativar' : 'Bloquear'}
+                                    </button>
+
+                                    {/* Excluir Operador (Com Proteção) */}
+                                    <button
+                                      onClick={() => setModalExclusaoOperador(op)}
+                                      className="p-1.5 text-[#DC2626] hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Excluir operador"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 )
                               ) : (
-                                <span className="text-[11px] text-slate-400 italic">Exclusivo para Coordenadores</span>
+                                <span className="text-[11px] text-slate-400 italic">Somente Leitura</span>
                               )}
                             </td>
                           </tr>
@@ -2010,6 +2052,90 @@ export const AdminPage: React.FC = () => {
                   </table>
                 </div>
               </div>
+
+              {/* Tabela de Convites Temporais Ativos */}
+              {operadorRole === 'admin' && (
+                <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden space-y-3">
+                  <div className="p-4 border-b border-[#E5E7EB] bg-[#F9FAFB] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="w-4 h-4 text-[#0B6EFD]" />
+                      <span className="text-xs font-bold text-[#1A1D1F]">
+                        Convites Temporais Emitidos ({convitesLista.length})
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#6B7280]">
+                      Permite auto-cadastro rápido com expiração automática
+                    </span>
+                  </div>
+
+                  {convitesLista.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[#6B7280]">
+                      Nenhum convite temporal ativo emitido recentemente. Clique em <strong>"Gerar Link de Convite"</strong> acima para criar o primeiro.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-[#1A1D1F]">
+                        <thead className="bg-[#F9FAFB] text-[#6B7280] uppercase text-[10px] tracking-wider border-b border-[#E5E7EB]">
+                          <tr>
+                            <th className="py-2.5 px-4 font-bold">Código do Convite</th>
+                            <th className="py-2.5 px-4 font-bold">Tenda Atribuída</th>
+                            <th className="py-2.5 px-4 font-bold">Função</th>
+                            <th className="py-2.5 px-4 font-bold">Usos</th>
+                            <th className="py-2.5 px-4 font-bold">Validade / Expiração</th>
+                            <th className="py-2.5 px-4 font-bold text-right">Compartilhar</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#E5E7EB]">
+                          {convitesLista.map((conv) => {
+                            const expira = new Date(conv.expira_em);
+                            const isExpirado = new Date() > expira || conv.usos_atuais >= conv.usos_maximos;
+                            const linkConvite = `${window.location.origin}/login?convite=${conv.codigo}`;
+
+                            return (
+                              <tr key={conv.id || conv.codigo} className={isExpirado ? 'opacity-50 bg-slate-50' : 'hover:bg-[#F9FAFB]'}>
+                                <td className="py-3 px-4 font-mono font-bold text-[#0B6EFD]">
+                                  {conv.codigo}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {conv.tenda?.nome || 'Qualquer tenda'}
+                                </td>
+                                <td className="py-3 px-4 uppercase text-[10px] font-bold">
+                                  {conv.role || 'operador'}
+                                </td>
+                                <td className="py-3 px-4 font-mono">
+                                  {conv.usos_atuais} / {conv.usos_maximos}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {isExpirado ? (
+                                    <span className="text-red-600 font-bold text-[10px]">Expirado</span>
+                                  ) : (
+                                    <span className="text-emerald-700 font-semibold text-[11px]">
+                                      Até {expira.toLocaleDateString('pt-BR')} {expira.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(linkConvite);
+                                      showToast(`Link de convite copiado para a área de transferência!`, 'sucesso');
+                                    }}
+                                    className="p-1.5 text-xs text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg font-bold inline-flex items-center gap-1 transition-colors"
+                                    title="Copiar link para WhatsApp"
+                                  >
+                                    <Copy className="w-3.5 h-3.5" />
+                                    <span>Copiar Link</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
           )}
@@ -2681,6 +2807,347 @@ export const AdminPage: React.FC = () => {
           showToast(`Pulseira #${finalNum} escaneada com sucesso!`, 'sucesso');
         }}
       />
+
+      {/* ========================================================= */}
+      {/* MODAL: EDITAR OPERADOR */}
+      {/* ========================================================= */}
+      {modalEdicaoOperador && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-[#0B6EFD]" />
+                <h3 className="text-base font-black text-[#1A1D1F]">Editar Cadastro de Operador</h3>
+              </div>
+              <button onClick={() => setModalEdicaoOperador(null)}><X className="w-5 h-5 text-[#6B7280]" /></button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await dataService.atualizarOperador(modalEdicaoOperador.id, {
+                    nome: modalEdicaoOperador.nome,
+                    role: modalEdicaoOperador.role,
+                    tenda_id: modalEdicaoOperador.tenda_id || null,
+                    status: modalEdicaoOperador.status,
+                  });
+                  showToast('Operador atualizado com sucesso!', 'sucesso');
+                  setModalEdicaoOperador(null);
+                  carregarDados();
+                } catch (err: any) {
+                  showToast('Erro ao atualizar operador: ' + err.message, 'erro');
+                }
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-bold mb-1 text-[#1A1D1F]">Nome Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={modalEdicaoOperador.nome}
+                  onChange={(e) => setModalEdicaoOperador({ ...modalEdicaoOperador, nome: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] font-bold text-sm outline-none focus:border-[#0B6EFD]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1 text-[#1A1D1F]">E-mail de Acesso</label>
+                <input
+                  type="email"
+                  disabled
+                  value={modalEdicaoOperador.email || ''}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-slate-50 font-mono text-xs text-slate-500 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1 text-[#1A1D1F]">Posto / Tenda de Atuação</label>
+                <select
+                  value={modalEdicaoOperador.tenda_id || ''}
+                  onChange={(e) => setModalEdicaoOperador({ ...modalEdicaoOperador, tenda_id: e.target.value || null })}
+                  className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD]"
+                >
+                  <option value="">Nenhum posto fixo</option>
+                  {tendas.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome} ({t.praia})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Nível de Acesso</label>
+                  <select
+                    disabled={modalEdicaoOperador.id === operadorUserId}
+                    value={modalEdicaoOperador.role || 'operador'}
+                    onChange={(e) => setModalEdicaoOperador({ ...modalEdicaoOperador, role: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold text-xs outline-none"
+                  >
+                    <option value="operador">Voluntário / Posto</option>
+                    <option value="admin">Coordenador Geral</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Status da Conta</label>
+                  <select
+                    disabled={modalEdicaoOperador.id === operadorUserId}
+                    value={modalEdicaoOperador.status || 'ativo'}
+                    onChange={(e) => setModalEdicaoOperador({ ...modalEdicaoOperador, status: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold text-xs outline-none"
+                  >
+                    <option value="ativo">Ativo</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t border-[#E5E7EB]">
+                <button
+                  type="button"
+                  onClick={() => setModalEdicaoOperador(null)}
+                  className="flex-1 py-2.5 border border-[#E5E7EB] font-bold rounded-xl text-[#6B7280] hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-[#0B6EFD] text-white font-bold rounded-xl hover:bg-[#0857CC] shadow"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: EXCLUIR OPERADOR (COM PROTEÇÃO INSTITUCIONAL) */}
+      {/* ========================================================= */}
+      {modalExclusaoOperador && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <UserMinus className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-black text-[#1A1D1F]">
+                Confirmar Remoção de Operador
+              </h3>
+              <p className="text-xs text-[#6B7280]">
+                Tem certeza que deseja remover o operador <strong className="text-[#1A1D1F]">{modalExclusaoOperador.nome}</strong>?
+              </p>
+            </div>
+
+            <div className="bg-[#FEF2F2] border border-[#FEE2E2] p-3 rounded-xl text-xs text-[#991B1B] space-y-1">
+              <div className="flex items-center gap-1.5 font-bold">
+                <ShieldAlert className="w-4 h-4 text-red-600" />
+                <span>Regra de Segurança Ativa:</span>
+              </div>
+              <p className="text-[11px] leading-tight">
+                Coordenadores não podem excluir outros Coordenadores. Apenas voluntários e operadores de posto podem ser removidos.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setModalExclusaoOperador(null)}
+                className="flex-1 py-2.5 border border-[#E5E7EB] font-bold rounded-xl text-[#6B7280] hover:bg-slate-50 text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!operadorUserId) return;
+                  try {
+                    await dataService.excluirOperador(modalExclusaoOperador.id, operadorUserId);
+                    showToast(`Operador ${modalExclusaoOperador.nome} removido com sucesso!`, 'sucesso');
+                    setModalExclusaoOperador(null);
+                    carregarDados();
+                  } catch (err: any) {
+                    showToast(err.message || 'Erro ao remover operador.', 'erro');
+                  }
+                }}
+                className="flex-1 py-2.5 bg-[#DC2626] text-white font-bold rounded-xl hover:bg-red-700 shadow text-xs"
+              >
+                Confirmar Remoção
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: GERAR LINK DE CONVITE TEMPORAL */}
+      {/* ========================================================= */}
+      {modalNovoConvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-[#0B6EFD]" />
+                <h3 className="text-base font-black text-[#1A1D1F]">Gerar Convite de Operador</h3>
+              </div>
+              <button onClick={() => { setModalNovoConvite(false); setConviteGeradoRecente(null); }}>
+                <X className="w-5 h-5 text-[#6B7280]" />
+              </button>
+            </div>
+
+            {!conviteGeradoRecente ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!operadorUserId) return;
+                  try {
+                    const novo = await dataService.criarConvite({
+                      criadorId: operadorUserId,
+                      horasValidade: formConviteValidadeHoras,
+                      tendaId: formConviteTendaId || null,
+                      role: formConviteRole,
+                      usosMaximos: formConviteUsos,
+                    });
+                    setConviteGeradoRecente(novo);
+                    showToast('Link de convite temporal gerado com sucesso!', 'sucesso');
+                    carregarDados();
+                  } catch (err: any) {
+                    showToast('Erro ao gerar convite: ' + err.message, 'erro');
+                  }
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Tempo de Validade (Expiração Automática)</label>
+                  <select
+                    value={formConviteValidadeHoras}
+                    onChange={(e) => setFormConviteValidadeHoras(Number(e.target.value))}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold outline-none focus:border-[#0B6EFD]"
+                  >
+                    <option value={1}>1 Hora (Urgência / Imediato)</option>
+                    <option value={6}>6 Horas (Turno de Praia)</option>
+                    <option value={24}>24 Horas (1 Dia)</option>
+                    <option value={72}>3 Dias (Fim de Semana)</option>
+                    <option value={168}>7 Dias (1 Semana)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Posto / Tenda Pré-Definida (Opcional)</label>
+                  <select
+                    value={formConviteTendaId}
+                    onChange={(e) => setFormConviteTendaId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD]"
+                  >
+                    <option value="">Qualquer posto (voluntário escolhe)</option>
+                    {tendas.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nome} ({t.praia})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold mb-1 text-[#1A1D1F]">Nível Atribuído</label>
+                    <select
+                      value={formConviteRole}
+                      onChange={(e) => setFormConviteRole(e.target.value as any)}
+                      className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold outline-none"
+                    >
+                      <option value="operador">Voluntário</option>
+                      <option value="admin">Coordenador</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1 text-[#1A1D1F]">Limite de Usos</label>
+                    <select
+                      value={formConviteUsos}
+                      onChange={(e) => setFormConviteUsos(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold outline-none"
+                    >
+                      <option value={1}>1 Uso (Individual)</option>
+                      <option value={5}>Até 5 Voluntários</option>
+                      <option value={10}>Até 10 Voluntários</option>
+                      <option value={50}>Grupo Grande (50)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[#E5E7EB] flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalNovoConvite(false)}
+                    className="flex-1 py-2.5 border border-[#E5E7EB] font-bold rounded-xl text-[#6B7280] hover:bg-slate-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-[#0B6EFD] text-white font-bold rounded-xl hover:bg-[#0857CC] shadow"
+                  >
+                    Criar Convite
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4 text-center animate-in zoom-in-95 duration-200">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2">
+                  <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">
+                    Convite Pronto para Envio
+                  </span>
+                  <div className="font-mono text-2xl font-black text-emerald-700 tracking-widest">
+                    {conviteGeradoRecente.codigo}
+                  </div>
+                  <div className="text-[11px] text-emerald-800">
+                    Válido até {new Date(conviteGeradoRecente.expira_em).toLocaleString('pt-BR')} ({conviteGeradoRecente.usos_maximos} uso(s))
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-1">
+                  <span className="text-[10px] text-[#6B7280] font-bold block uppercase">Link de Cadastro Direto:</span>
+                  <div className="font-mono text-xs text-[#0B6EFD] break-all select-all font-semibold">
+                    {`${window.location.origin}/login?convite=${conviteGeradoRecente.codigo}`}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      const link = `${window.location.origin}/login?convite=${conviteGeradoRecente.codigo}`;
+                      navigator.clipboard.writeText(link);
+                      showToast('Link de convite copiado!', 'sucesso');
+                    }}
+                    className="flex-1 py-2.5 bg-[#0B6EFD] text-white font-bold text-xs rounded-xl hover:bg-[#0857CC] shadow flex items-center justify-center gap-1.5"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar Link</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const link = `${window.location.origin}/login?convite=${conviteGeradoRecente.codigo}`;
+                      const msg = encodeURIComponent(`Olá! Você foi convidado para a equipe dos Anjos da Praia. Cadastre-se pelo link seguro: ${link}`);
+                      window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+                    }}
+                    className="flex-1 py-2.5 bg-[#16A34A] text-white font-bold text-xs rounded-xl hover:bg-[#15803D] shadow flex items-center justify-center gap-1.5"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

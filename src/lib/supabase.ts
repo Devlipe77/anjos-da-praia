@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus, Praia } from '../types';
+import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus, Praia, ConviteOperador } from '../types';
 
 const supabaseUrl = 
   import.meta.env.VITE_SUPABASE_URL || 
@@ -376,11 +376,16 @@ export const dataService = {
     codigoAutorizacao?: string;
     role?: 'admin' | 'operador';
   }) {
-    // Validação da Chave de Acesso Institucional
+    // Validação da Chave de Acesso Institucional ou Convite Temporal
     const codigoInformado = (params.codigoAutorizacao || '').trim().toUpperCase();
-    if (codigoInformado !== dataService.CODIGO_AUTORIZACAO_OFICIAL) {
-      throw new Error('Código de Autorização Institucional inválido. Solicite o código à coordenação dos Anjos da Praia.');
+    const validacao = await dataService.validarConvite(codigoInformado);
+    if (!validacao.valido) {
+      throw new Error(validacao.mensagem || 'Código de Autorização Institucional inválido ou expirado.');
     }
+
+    // Se o convite especificar um role ou tenda, podemos aproveitar
+    const roleFinal = validacao.convite?.role || params.role || 'operador';
+    const tendaFinal = validacao.convite?.tenda_id || params.tendaId || null;
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: params.email.trim(),
@@ -388,8 +393,8 @@ export const dataService = {
       options: {
         data: {
           nome: params.nome.trim(),
-          tenda_id: params.tendaId || null,
-          role: params.role || 'operador',
+          tenda_id: tendaFinal,
+          role: roleFinal,
           status: 'ativo',
         }
       }
@@ -404,10 +409,13 @@ export const dataService = {
           id: authData.user.id,
           nome: params.nome.trim(),
           email: params.email.trim(),
-          tenda_id: params.tendaId || null,
-          role: params.role || 'operador',
+          tenda_id: tendaFinal,
+          role: roleFinal,
           status: 'ativo',
         }]);
+
+        // Consumir 1 uso do convite (se aplicável)
+        await dataService.consumirUsoConvite(codigoInformado);
       } catch (e) {
         console.warn('Perfil de operador salvo nos metadados do Auth.');
       }
@@ -488,11 +496,147 @@ export const dataService = {
     if (error) throw error;
   },
 
+  async excluirOperador(idParaExcluir: string, executadoPorUserId: string): Promise<void> {
+    // 1. Verificar quem está executando a exclusão
+    const executor = await this.obterOperador(executadoPorUserId);
+    if (!executor || executor.role !== 'admin') {
+      throw new Error('Apenas Coordenadores Gerais (admin) podem excluir operadores.');
+    }
+
+    // 2. Obter dados do operador que será excluído
+    const alvo = await this.obterOperador(idParaExcluir);
+    if (!alvo) {
+      throw new Error('Operador não encontrado.');
+    }
+
+    // 3. Regra de Proteção Hierárquica: Não é permitido excluir outro Coordenador nem a si próprio
+    if (alvo.id === executadoPorUserId) {
+      throw new Error('Você não pode excluir sua própria conta de Coordenador.');
+    }
+    if (alvo.role === 'admin') {
+      throw new Error('Operação negada por segurança: Um Coordenador não pode excluir outro Coordenador.');
+    }
+
+    // 4. Efetuar a exclusão na tabela operadores
+    const { error } = await supabase
+      .from('operadores')
+      .delete()
+      .eq('id', idParaExcluir);
+    if (error) throw error;
+  },
+
   async atualizarTendaOperador(userId: string, tendaId: string | null): Promise<void> {
     const { error } = await supabase
       .from('operadores')
       .update({ tenda_id: tendaId })
       .eq('id', userId);
     if (error) throw error;
+  },
+
+  // --------------------------------------------------------
+  // 6. GESTÃO DE CONVITES TEMPORAIS DE OPERADORES
+  // --------------------------------------------------------
+  async criarConvite(params: {
+    criadorId: string;
+    tendaId?: string | null;
+    role?: 'admin' | 'operador';
+    horasValidade: number;
+    usosMaximos?: number;
+  }): Promise<ConviteOperador> {
+    // Gerar código único amigável (Ex: ANJOS-7X9K)
+    const sufixo = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const codigo = `ANJOS-${sufixo}`;
+    
+    const expiraEm = new Date();
+    expiraEm.setHours(expiraEm.getHours() + params.horasValidade);
+
+    const { data, error } = await supabase
+      .from('convites_operador')
+      .insert([{
+        codigo,
+        criado_por: params.criadorId,
+        tenda_id: params.tendaId || null,
+        role: params.role || 'operador',
+        usos_maximos: params.usosMaximos || 1,
+        usos_atuais: 0,
+        expira_em: expiraEm.toISOString(),
+      }])
+      .select('*, tendas(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async listarConvites(): Promise<ConviteOperador[]> {
+    try {
+      const { data, error } = await supabase
+        .from('convites_operador')
+        .select('*, tendas(*)')
+        .order('criado_em', { ascending: false });
+      if (error) return [];
+      return data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async validarConvite(codigo: string): Promise<{ valido: boolean; mensagem?: string; convite?: ConviteOperador }> {
+    const limpo = codigo.trim().toUpperCase();
+    
+    // Suporte ao código institucional mestre fixo
+    if (limpo === this.CODIGO_AUTORIZACAO_OFICIAL) {
+      return { valido: true };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('convites_operador')
+        .select('*')
+        .eq('codigo', limpo)
+        .maybeSingle();
+
+      if (error || !data) {
+        return { valido: false, mensagem: 'Código de convite não encontrado.' };
+      }
+
+      // Verificar expiração
+      const agora = new Date();
+      const expira = new Date(data.expira_em);
+      if (agora > expira) {
+        return { valido: false, mensagem: `Este convite expirou em ${expira.toLocaleString('pt-BR')}.` };
+      }
+
+      // Verificar usos máximos
+      if (data.usos_atuais >= data.usos_maximos) {
+        return { valido: false, mensagem: 'Este convite já atingiu o limite máximo de utilizações.' };
+      }
+
+      return { valido: true, convite: data };
+    } catch (err: any) {
+      return { valido: false, mensagem: 'Erro ao consultar convite: ' + err.message };
+    }
+  },
+
+  async consumirUsoConvite(codigo: string): Promise<void> {
+    const limpo = codigo.trim().toUpperCase();
+    if (limpo === this.CODIGO_AUTORIZACAO_OFICIAL) return;
+
+    try {
+      const { data } = await supabase
+        .from('convites_operador')
+        .select('id, usos_atuais')
+        .eq('codigo', limpo)
+        .maybeSingle();
+
+      if (data) {
+        await supabase
+          .from('convites_operador')
+          .update({ usos_atuais: (data.usos_atuais || 0) + 1 })
+          .eq('id', data.id);
+      }
+    } catch (e) {
+      console.warn('Falha ao incrementar uso do convite:', e);
+    }
   }
 };

@@ -141,3 +141,40 @@ DROP POLICY IF EXISTS "Acesso seguro a operadores" ON operadores;
 CREATE POLICY "Acesso seguro a operadores" ON operadores 
   FOR ALL TO authenticated USING (true);
 
+-- 8. Tabela de Convites Temporais de Operadores (com Expiração Automática)
+CREATE TABLE IF NOT EXISTS convites_operador (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo VARCHAR(30) NOT NULL UNIQUE,
+  criado_por UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  tenda_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
+  role VARCHAR(30) DEFAULT 'operador' CHECK (role IN ('admin', 'operador')),
+  usos_maximos INT DEFAULT 1,
+  usos_atuais INT DEFAULT 0,
+  expira_em TIMESTAMP WITH TIME ZONE NOT NULL,
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_convites_codigo ON convites_operador(codigo);
+CREATE INDEX IF NOT EXISTS idx_convites_expira ON convites_operador(expira_em);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE convites_operador;
+
+-- Políticas de Segurança para Convites:
+ALTER TABLE convites_operador ENABLE ROW LEVEL SECURITY;
+
+-- Banhistas/voluntários podem ler/validar códigos de convite para se cadastrar
+DROP POLICY IF EXISTS "Leitura de convites para cadastro" ON convites_operador;
+CREATE POLICY "Leitura de convites para cadastro" ON convites_operador 
+  FOR SELECT TO anon, authenticated USING (true);
+
+-- Apenas operadores autenticados podem criar convites
+DROP POLICY IF EXISTS "Criacao de convites por operadores" ON convites_operador;
+CREATE POLICY "Criacao de convites por operadores" ON convites_operador 
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Permitir atualização de usos_atuais
+DROP POLICY IF EXISTS "Atualizacao de convites" ON convites_operador;
+CREATE POLICY "Atualizacao de convites" ON convites_operador 
+  FOR UPDATE USING (true);
+
+
