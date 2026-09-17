@@ -118,9 +118,10 @@ export const MapView: React.FC<MapViewProps> = ({
 
       // Cores por status usando a paleta oficial
       let pinBg = 'bg-[#FF6B35] ring-[#FF6B35]/40'; // Coral (Localizada)
-      if (oco.status === 'Equipe a caminho') pinBg = 'bg-[#0B6EFD] ring-[#0B6EFD]/40';
-      if (oco.status === 'Criança recebida') pinBg = 'bg-[#9333EA] ring-[#9333EA]/40';
-      if (isConcluido) pinBg = 'bg-[#16A34A] ring-[#16A34A]/40';
+      if (oco.status === 'Equipe a caminho') pinBg = 'bg-[#0B6EFD] ring-[#0B6EFD]/40'; // Azul
+      if (oco.status === 'Criança recebida') pinBg = 'bg-[#9333EA] ring-[#9333EA]/40'; // Roxo (Na tenda)
+      if (oco.status === 'Responsáveis localizados') pinBg = 'bg-[#0284C7] ring-[#0284C7]/40'; // Azul Claro (Pais contatados)
+      if (isConcluido) pinBg = 'bg-[#16A34A] ring-[#16A34A]/40'; // Verde (Reencontro realizado)
 
       const alertIcon = L.divIcon({
         className: 'custom-alert-pin',
@@ -203,7 +204,7 @@ export const MapView: React.FC<MapViewProps> = ({
       <div ref={mapContainerRef} className="w-full h-full min-h-[400px]" />
       
       {/* Legenda Operacional */}
-      <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm px-3.5 py-2.5 rounded-xl shadow-md border border-[#E5E7EB] text-xs text-[#1A1D1F] z-[400] flex flex-col gap-1.5 pointer-events-auto">
+      <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm px-3.5 py-2.5 rounded-xl shadow-md border border-[#E5E7EB] text-xs text-[#1A1D1F] z-[30] flex flex-col gap-1.5 pointer-events-auto">
         <div className="font-bold text-[#1A1D1F] pb-1 border-b border-[#E5E7EB]">
           Legenda Operacional
         </div>
@@ -217,15 +218,23 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF6B35]"></span>
-          <span className="text-[11px]">Criança Localizada (Urgente)</span>
+          <span className="text-[11px]">Criança localizada</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#0B6EFD]"></span>
-          <span className="text-[11px]">Equipe a Caminho</span>
+          <span className="text-[11px]">Equipe a caminho</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#9333EA]"></span>
+          <span className="text-[11px]">Criança na tenda</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#0284C7]"></span>
+          <span className="text-[11px]">Pais contatados</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#16A34A]"></span>
-          <span className="text-[11px]">Reencontro Realizado</span>
+          <span className="text-[11px]">Reencontro realizado 🎉</span>
         </div>
       </div>
     </div>

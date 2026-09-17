@@ -1266,10 +1266,10 @@ export const AdminPage: React.FC = () => {
                       title="Filtrar por etapa ou situação da ocorrência"
                     >
                       <option value="todas">📋 Todas as Situações</option>
-                      <option value="Criança localizada">🚨 Criança localizada</option>
+                      <option value="Criança localizada">⚠️ Criança localizada</option>
                       <option value="Equipe a caminho">🏃 Equipe a caminho</option>
-                      <option value="Criança recebida">🏢 Criança recebida na tenda</option>
-                      <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                      <option value="Criança recebida">🛡️ Criança na tenda</option>
+                      <option value="Responsáveis localizados">👤 Pais contatados</option>
                       <option value="Reencontro realizado">🎉 Reencontro realizado</option>
                     </select>
                   </div>
@@ -1570,10 +1570,10 @@ export const AdminPage: React.FC = () => {
                         title="Filtrar por etapa ou situação da ocorrência"
                       >
                         <option value="todas">📋 Todas as Situações</option>
-                        <option value="Criança localizada">🚨 Criança localizada</option>
+                        <option value="Criança localizada">⚠️ Criança localizada</option>
                         <option value="Equipe a caminho">🏃 Equipe a caminho</option>
-                        <option value="Criança recebida">🏢 Criança recebida na tenda</option>
-                        <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                        <option value="Criança recebida">🛡️ Criança na tenda</option>
+                        <option value="Responsáveis localizados">👤 Pais contatados</option>
                         <option value="Reencontro realizado">🎉 Reencontro realizado</option>
                       </select>
                     </div>
@@ -1727,8 +1727,8 @@ export const AdminPage: React.FC = () => {
                                   <option value="Criança localizada">Criança localizada</option>
                                   <option value="Equipe a caminho">Equipe a caminho</option>
                                   <option value="Criança recebida">Criança na tenda</option>
-                                  <option value="Responsáveis localizados">Responsáveis localizados</option>
-                                  <option value="Reencontro realizado">Reencontro feito 🎉</option>
+                                  <option value="Responsáveis localizados">Pais contatados</option>
+                                  <option value="Reencontro realizado">Reencontro realizado 🎉</option>
                                 </select>
                               )
                             )}
@@ -2264,10 +2264,10 @@ export const AdminPage: React.FC = () => {
                       title="Filtrar por situação da ocorrência"
                     >
                       <option value="todas">📋 Todas as Situações</option>
-                      <option value="Criança localizada">🚨 Criança localizada</option>
+                      <option value="Criança localizada">⚠️ Criança localizada</option>
                       <option value="Equipe a caminho">🏃 Equipe a caminho</option>
-                      <option value="Criança recebida">🏢 Criança recebida na tenda</option>
-                      <option value="Responsáveis localizados">📞 Responsáveis contatados</option>
+                      <option value="Criança recebida">🛡️ Criança na tenda</option>
+                      <option value="Responsáveis localizados">👤 Pais contatados</option>
                       <option value="Reencontro realizado">🎉 Reencontro realizado</option>
                     </select>
                   </div>
