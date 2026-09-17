@@ -22,6 +22,8 @@ import {
   RefreshCw, 
   LifeBuoy, 
   Sparkles,
+  Filter,
+  Calendar,
   Tent,
   AlertTriangle,
   User as UserIcon,
@@ -80,8 +82,23 @@ export const AdminPage: React.FC = () => {
   const [operadorTendaId, setOperadorTendaId] = useState<string | null>(null);
   const [tendaOperador, setTendaOperador] = useState<string>('Posto Praia do Morro');
 
-  // Filtros de busca
+  // Filtros de busca de pulseiras
   const [termoBuscaPulseira, setTermoBuscaPulseira] = useState('');
+
+  // Filtros Operacionais de Monitoramento & Mapa
+  const [filtroMonitorStatus, setFiltroMonitorStatus] = useState<'todos' | 'ativos' | 'concluidos'>('ativos');
+  const [filtroMonitorTendaId, setFiltroMonitorTendaId] = useState<string>('todas');
+  const [filtroMonitorBusca, setFiltroMonitorBusca] = useState<string>('');
+
+  // Filtros do Dashboard
+  const [filtroDashTendaId, setFiltroDashTendaId] = useState<string>('todas');
+  const [filtroDashStatus, setFiltroDashStatus] = useState<'todos' | 'ativos' | 'concluidos'>('todos');
+
+  // Filtros da Tela de Relatórios
+  const [filtroRelatorioPraia, setFiltroRelatorioPraia] = useState<string>('todas');
+  const [filtroRelatorioStatus, setFiltroRelatorioStatus] = useState<'todos' | 'ativos' | 'concluidos'>('todos');
+  const [filtroRelatorioPeriodo, setFiltroRelatorioPeriodo] = useState<'tudo' | 'hoje' | '7dias' | '30dias'>('tudo');
+  const [filtroRelatorioBusca, setFiltroRelatorioBusca] = useState<string>('');
 
   // Modais de Cadastro / Edição / Exclusão de Pulseira
   const [modalNovaPulseira, setModalNovaPulseira] = useState(false);
@@ -502,9 +519,101 @@ export const AdminPage: React.FC = () => {
     );
   }, [cadastros, termoBuscaPulseira]);
 
-  // Contadores
+  // Contadores globais
   const chamadosAtivos = useMemo(() => ocorrencias.filter(o => o.status !== 'Reencontro realizado'), [ocorrencias]);
   const chamadosConcluidos = useMemo(() => ocorrencias.filter(o => o.status === 'Reencontro realizado'), [ocorrencias]);
+
+  // 1. Ocorrências Filtradas no Monitoramento / Mapa
+  const ocorrenciasMonitoramento = useMemo(() => {
+    return ocorrencias.filter(o => {
+      // Filtro de Status
+      if (filtroMonitorStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroMonitorStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+
+      // Filtro de Tenda
+      if (filtroMonitorTendaId !== 'todas') {
+        const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
+        if (tendaIdOco !== filtroMonitorTendaId) return false;
+      }
+
+      // Filtro de Busca Texto (Pulseira, Criança, Responsável, Telefone)
+      if (filtroMonitorBusca.trim()) {
+        const q = filtroMonitorBusca.toLowerCase().trim();
+        const pulseiraMatch = o.numero_pulseira.toLowerCase().includes(q);
+        const criancaMatch = o.cadastro?.nome_crianca?.toLowerCase().includes(q);
+        const respMatch = o.cadastro?.nome_responsavel?.toLowerCase().includes(q);
+        const telMatch = o.cadastro?.telefone_contato?.includes(q);
+        if (!pulseiraMatch && !criancaMatch && !respMatch && !telMatch) return false;
+      }
+
+      return true;
+    });
+  }, [ocorrencias, filtroMonitorStatus, filtroMonitorTendaId, filtroMonitorBusca]);
+
+  // 2. Ocorrências Filtradas no Dashboard
+  const ocorrenciasDashboard = useMemo(() => {
+    return ocorrencias.filter(o => {
+      if (filtroDashStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroDashStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+
+      if (filtroDashTendaId !== 'todas') {
+        const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
+        if (tendaIdOco !== filtroDashTendaId) return false;
+      }
+      return true;
+    });
+  }, [ocorrencias, filtroDashStatus, filtroDashTendaId]);
+
+  // KPIs do Dashboard Reativos ao Filtro de Tenda
+  const dashCadastrosCount = useMemo(() => {
+    if (filtroDashTendaId === 'todas') return cadastros.length;
+    return cadastros.filter(c => c.tenda_id === filtroDashTendaId).length;
+  }, [cadastros, filtroDashTendaId]);
+
+  const dashAtivosCount = useMemo(() => {
+    return ocorrenciasDashboard.filter(o => o.status !== 'Reencontro realizado').length;
+  }, [ocorrenciasDashboard]);
+
+  const dashConcluidosCount = useMemo(() => {
+    return ocorrenciasDashboard.filter(o => o.status === 'Reencontro realizado').length;
+  }, [ocorrenciasDashboard]);
+
+  // 3. Ocorrências Filtradas na Tela de Relatórios
+  const ocorrenciasRelatorios = useMemo(() => {
+    const agora = new Date().getTime();
+    return ocorrencias.filter(o => {
+      // Filtro de Praia
+      if (filtroRelatorioPraia !== 'todas') {
+        const praiaOco = o.cadastro?.praia_origem || o.tendaMaisProxima?.tenda?.praia;
+        if (praiaOco !== filtroRelatorioPraia) return false;
+      }
+
+      // Filtro de Status
+      if (filtroRelatorioStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroRelatorioStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+
+      // Filtro de Período
+      if (filtroRelatorioPeriodo !== 'tudo') {
+        const dataOco = new Date(o.horario_alerta).getTime();
+        const diffHoras = (agora - dataOco) / (1000 * 60 * 60);
+        if (filtroRelatorioPeriodo === 'hoje' && diffHoras > 24) return false;
+        if (filtroRelatorioPeriodo === '7dias' && diffHoras > 24 * 7) return false;
+        if (filtroRelatorioPeriodo === '30dias' && diffHoras > 24 * 30) return false;
+      }
+
+      // Filtro de Busca
+      if (filtroRelatorioBusca.trim()) {
+        const q = filtroRelatorioBusca.toLowerCase().trim();
+        const pulseiraMatch = o.numero_pulseira.toLowerCase().includes(q);
+        const criancaMatch = o.cadastro?.nome_crianca?.toLowerCase().includes(q);
+        const respMatch = o.cadastro?.nome_responsavel?.toLowerCase().includes(q);
+        const telMatch = o.cadastro?.telefone_contato?.includes(q);
+        if (!pulseiraMatch && !criancaMatch && !respMatch && !telMatch) return false;
+      }
+
+      return true;
+    });
+  }, [ocorrencias, filtroRelatorioPraia, filtroRelatorioStatus, filtroRelatorioPeriodo, filtroRelatorioBusca]);
 
   // Submeter nova pulseira
   const handleCadastrarPulseira = async (e: React.FormEvent) => {
@@ -707,6 +816,8 @@ export const AdminPage: React.FC = () => {
   // Exportação de Relatório Geral em formato CSV para a Associação e Parceiros
   const exportarRelatorioCSV = () => {
     try {
+      const listaParaExportar = secaoAtiva === 'relatorios' ? ocorrenciasRelatorios : ocorrencias;
+
       const headers = [
         'ID Ocorrencia',
         'Numero Pulseira',
@@ -721,7 +832,7 @@ export const AdminPage: React.FC = () => {
         'Distancia (m)'
       ];
 
-      const linhas = ocorrencias.map(oco => [
+      const linhas = listaParaExportar.map(oco => [
         `"${oco.id || ''}"`,
         `"${oco.numero_pulseira || ''}"`,
         `"${oco.cadastro?.nome_crianca || 'Nao identificado'}"`,
@@ -990,6 +1101,7 @@ export const AdminPage: React.FC = () => {
               {secaoAtiva === 'tendas' && 'Postos de Atendimento'}
               {secaoAtiva === 'impressao' && 'Emissão de Pulseiras'}
               {secaoAtiva === 'relatorios' && 'Relatórios e Indicadores'}
+              {secaoAtiva === 'usuarios' && 'Controle de Acesso e Equipe'}
             </h1>
           </div>
 
@@ -1092,7 +1204,67 @@ export const AdminPage: React.FC = () => {
           {secaoAtiva === 'dashboard' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               
-              {/* KPIs Principais */}
+              {/* Barra de Filtro Rápido do Dashboard */}
+              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-[#EFF6FF] text-[#0B6EFD]">
+                    <Filter className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-[#1A1D1F]">Filtro de Operação</span>
+                    <p className="text-[10px] text-[#6B7280]">Restrinja a visão geral a uma tenda ou status específico</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Seletor de Tenda / Praia */}
+                  <div className="relative">
+                    <select
+                      value={filtroDashTendaId}
+                      onChange={(e) => setFiltroDashTendaId(e.target.value)}
+                      className="text-xs font-bold py-1.5 pl-3 pr-7 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] appearance-none cursor-pointer"
+                    >
+                      <option value="todas">📍 Toda Guarapari (Geral)</option>
+                      {operadorTendaId && (
+                        <option value={operadorTendaId}>⭐ Meu Posto Atual</option>
+                      )}
+                      {tendas.map(t => (
+                        <option key={t.id} value={t.id}>{t.nome} ({t.praia})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Pílulas de Status */}
+                  <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                    <button
+                      onClick={() => setFiltroDashStatus('todos')}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        filtroDashStatus === 'todos' ? 'bg-white text-[#1A1D1F] shadow-xs' : 'text-[#6B7280]'
+                      }`}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      onClick={() => setFiltroDashStatus('ativos')}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        filtroDashStatus === 'ativos' ? 'bg-[#FF6B35] text-white shadow-xs' : 'text-[#6B7280]'
+                      }`}
+                    >
+                      🔥 Ativos ({chamadosAtivos.length})
+                    </button>
+                    <button
+                      onClick={() => setFiltroDashStatus('concluidos')}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                        filtroDashStatus === 'concluidos' ? 'bg-[#16A34A] text-white shadow-xs' : 'text-[#6B7280]'
+                      }`}
+                    >
+                      ✅ Concluídos
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPIs Principais Reativos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm">
@@ -1100,8 +1272,10 @@ export const AdminPage: React.FC = () => {
                     <span>Crianças Cadastradas</span>
                     <Users className="w-4 h-4 text-[#0B6EFD]" />
                   </div>
-                  <div className="text-3xl font-black text-[#1A1D1F]">{cadastros.length}</div>
-                  <p className="text-[11px] text-[#6B7280] mt-1">Pulseiras ativas no banco real</p>
+                  <div className="text-3xl font-black text-[#1A1D1F]">{dashCadastrosCount}</div>
+                  <p className="text-[11px] text-[#6B7280] mt-1">
+                    {filtroDashTendaId === 'todas' ? 'Total em todas as tendas' : 'Cadastradas neste posto'}
+                  </p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm">
@@ -1109,8 +1283,8 @@ export const AdminPage: React.FC = () => {
                     <span>Alertas em Aberto</span>
                     <Bell className="w-4 h-4 text-[#FF6B35]" />
                   </div>
-                  <div className="text-3xl font-black text-[#FF6B35]">{chamadosAtivos.length}</div>
-                  <p className="text-[11px] text-[#6B7280] mt-1">Aguardando reencontro na praia</p>
+                  <div className="text-3xl font-black text-[#FF6B35]">{dashAtivosCount}</div>
+                  <p className="text-[11px] text-[#6B7280] mt-1">Aguardando reencontro</p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-[#E5E7EB] shadow-sm">
@@ -1118,9 +1292,9 @@ export const AdminPage: React.FC = () => {
                     <span>Reencontros Feitos</span>
                     <CheckCircle className="w-4 h-4 text-[#16A34A]" />
                   </div>
-                  <div className="text-3xl font-black text-[#16A34A]">{chamadosConcluidos.length}</div>
+                  <div className="text-3xl font-black text-[#16A34A]">{dashConcluidosCount}</div>
                   <p className="text-[11px] text-[#6B7280] mt-1">
-                    Taxa: {ocorrencias.length > 0 ? Math.round((chamadosConcluidos.length / ocorrencias.length) * 100) : 100}% de sucesso
+                    Taxa: {ocorrenciasDashboard.length > 0 ? Math.round((dashConcluidosCount / ocorrenciasDashboard.length) * 100) : 100}% de sucesso
                   </p>
                 </div>
 
@@ -1138,13 +1312,18 @@ export const AdminPage: React.FC = () => {
               {/* Bloco 2: Ocorrências Recentes e Distribuição */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* Tabela Resumida de Ocorrências */}
+                {/* Tabela Resumida de Ocorrências com Filtro */}
                 <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-extrabold text-[#1A1D1F] flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Flame className="w-4 h-4 text-[#FF6B35]" />
-                      <span>Últimos Chamados em Tempo Real</span>
-                    </h2>
+                      <h2 className="text-sm font-extrabold text-[#1A1D1F]">
+                        Últimos Chamados em Tempo Real
+                      </h2>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-[#6B7280]">
+                        {ocorrenciasDashboard.length} exibidos
+                      </span>
+                    </div>
                     <button
                       onClick={() => setSecaoAtiva('monitoramento')}
                       className="text-xs font-bold text-[#0B6EFD] hover:underline"
@@ -1153,11 +1332,11 @@ export const AdminPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {ocorrencias.length === 0 ? (
+                  {ocorrenciasDashboard.length === 0 ? (
                     <div className="py-12 text-center text-[#6B7280]">
                       <CheckCircle className="w-10 h-10 text-[#16A34A] mx-auto mb-2 opacity-80" />
-                      <div className="font-bold text-sm text-[#1A1D1F]">Nenhuma ocorrência pendente</div>
-                      <p className="text-xs mt-1">A praia está tranquila neste momento.</p>
+                      <div className="font-bold text-sm text-[#1A1D1F]">Nenhuma ocorrência encontrada</div>
+                      <p className="text-xs mt-1">Nenhum chamado corresponde ao filtro selecionado.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1172,7 +1351,7 @@ export const AdminPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#E5E7EB]">
-                          {ocorrencias.slice(0, 5).map((oco) => (
+                          {ocorrenciasDashboard.slice(0, 6).map((oco) => (
                             <tr key={oco.id} className="hover:bg-[#F9FAFB]">
                               <td className="py-3 px-3 font-mono font-black text-[#FF6B35]">
                                 #{oco.numero_pulseira}
@@ -1252,15 +1431,107 @@ export const AdminPage: React.FC = () => {
                     <Bell className="w-4 h-4 text-[#FF6B35]" />
                     <span>Fila Operacional ({chamadosAtivos.length} ativos)</span>
                   </h2>
+                  <span className="text-[11px] font-bold text-[#6B7280]">
+                    {ocorrenciasMonitoramento.length} filtrados
+                  </span>
                 </div>
 
-                {ocorrencias.length === 0 ? (
+                {/* Barra de Filtros Operacionais Compacta */}
+                <div className="bg-white p-2.5 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-2 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    {/* Campo de Busca Rápida */}
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 text-[#6B7280] absolute left-2.5 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por pulseira, nome..."
+                        value={filtroMonitorBusca}
+                        onChange={(e) => setFiltroMonitorBusca(e.target.value)}
+                        className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-[#E5E7EB] outline-none focus:border-[#FF6B35] text-[#1A1D1F]"
+                      />
+                      {filtroMonitorBusca && (
+                        <button 
+                          onClick={() => setFiltroMonitorBusca('')}
+                          className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtro de Posto / Tenda */}
+                    <select
+                      value={filtroMonitorTendaId}
+                      onChange={(e) => setFiltroMonitorTendaId(e.target.value)}
+                      className="text-xs font-bold py-1.5 px-2 rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#FF6B35] text-[#1A1D1F] cursor-pointer max-w-[140px] truncate"
+                    >
+                      <option value="todas">📍 Todas</option>
+                      {operadorTendaId && (
+                        <option value={operadorTendaId}>⭐ Meu Posto</option>
+                      )}
+                      {tendas.map(t => (
+                        <option key={t.id} value={t.id}>{t.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Pílulas de Status */}
+                  <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setFiltroMonitorStatus('ativos')}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                          filtroMonitorStatus === 'ativos'
+                            ? 'bg-[#FF6B35] text-white shadow-xs'
+                            : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
+                        }`}
+                      >
+                        🔥 Ativos
+                      </button>
+                      <button
+                        onClick={() => setFiltroMonitorStatus('concluidos')}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                          filtroMonitorStatus === 'concluidos'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
+                            : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
+                        }`}
+                      >
+                        ✅ Concluídos
+                      </button>
+                      <button
+                        onClick={() => setFiltroMonitorStatus('todos')}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg transition-all ${
+                          filtroMonitorStatus === 'todos'
+                            ? 'bg-slate-800 text-white shadow-xs'
+                            : 'bg-slate-100 text-[#6B7280] hover:bg-slate-200'
+                        }`}
+                      >
+                        Todos
+                      </button>
+                    </div>
+
+                    {(filtroMonitorStatus !== 'ativos' || filtroMonitorTendaId !== 'todas' || filtroMonitorBusca) && (
+                      <button
+                        onClick={() => {
+                          setFiltroMonitorStatus('ativos');
+                          setFiltroMonitorTendaId('todas');
+                          setFiltroMonitorBusca('');
+                        }}
+                        className="text-[10px] font-bold text-[#DC2626] hover:underline"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {ocorrenciasMonitoramento.length === 0 ? (
                   <div className="bg-white p-8 rounded-2xl border border-[#E5E7EB] text-center text-xs text-[#6B7280]">
-                    Nenhum alerta registrado até o momento.
+                    Nenhum alerta corresponde aos filtros selecionados.
                   </div>
                 ) : (
                   <div className="space-y-3 flex-1 overflow-y-auto pr-1.5">
-                    {ocorrencias.map((oco) => {
+                    {ocorrenciasMonitoramento.map((oco) => {
                       const isSelected = selectedOcorrencia?.id === oco.id;
                       const isFinalizado = oco.status === 'Reencontro realizado';
 
@@ -1417,7 +1688,7 @@ export const AdminPage: React.FC = () => {
               {/* Mapa Leaflet à Direita (Altura total da tela) */}
               <div className="lg:col-span-7 bg-white p-3 rounded-2xl border border-[#E5E7EB] shadow-sm h-full min-h-[550px] flex flex-col">
                 <MapView
-                  ocorrencias={ocorrencias}
+                  ocorrencias={ocorrenciasMonitoramento}
                   tendas={tendas}
                   selectedOcorrencia={selectedOcorrencia}
                   onSelectOcorrencia={(oco) => setSelectedOcorrencia(oco)}
@@ -1830,7 +2101,7 @@ export const AdminPage: React.FC = () => {
           {secaoAtiva === 'relatorios' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               
-              {/* Header do Relatório com Exportador */}
+              {/* Header do Relatório com Exportador Inteligente */}
               <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-base font-black text-[#1A1D1F] flex items-center gap-2">
@@ -1838,20 +2109,99 @@ export const AdminPage: React.FC = () => {
                     <span>Relatório Consolidado de Ocorrências & Praias</span>
                   </h2>
                   <p className="text-xs text-[#6B7280] mt-1">
-                    Histórico completo para prestação de contas com a Prefeitura de Guarapari e Corpo de Bombeiros Militar ES
+                    Histórico auditado para prestação de contas com a Prefeitura de Guarapari e Corpo de Bombeiros Militar ES
                   </p>
                 </div>
 
                 <button
                   onClick={exportarRelatorioCSV}
                   className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0B6EFD] hover:bg-[#0857CC] text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+                  title="Baixar planilha CSV com os filtros atualmente aplicados"
                 >
                   <FileDown className="w-4 h-4" />
-                  <span>Baixar Planilha Completa (.CSV)</span>
+                  <span>Baixar Planilha Filtrada (.CSV)</span>
                 </button>
               </div>
 
-              {/* Indicadores por Praia */}
+              {/* Barra de Filtros de Relatórios */}
+              <div className="bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-[#0B6EFD]" />
+                    <span className="text-xs font-black text-[#1A1D1F]">Filtros do Relatório & Auditoria</span>
+                  </div>
+                  {(filtroRelatorioPraia !== 'todas' || filtroRelatorioStatus !== 'todos' || filtroRelatorioPeriodo !== 'tudo' || filtroRelatorioBusca) && (
+                    <button
+                      onClick={() => {
+                        setFiltroRelatorioPraia('todas');
+                        setFiltroRelatorioStatus('todos');
+                        setFiltroRelatorioPeriodo('tudo');
+                        setFiltroRelatorioBusca('');
+                      }}
+                      className="text-xs font-bold text-[#DC2626] hover:underline"
+                    >
+                      Limpar Filtros
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Busca por Texto */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-[#6B7280] absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por pulseira, nome, tel..."
+                      value={filtroRelatorioBusca}
+                      onChange={(e) => setFiltroRelatorioBusca(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[#E5E7EB] outline-none focus:border-[#0B6EFD] text-[#1A1D1F]"
+                    />
+                  </div>
+
+                  {/* Filtro por Praia */}
+                  <div>
+                    <select
+                      value={filtroRelatorioPraia}
+                      onChange={(e) => setFiltroRelatorioPraia(e.target.value)}
+                      className="w-full p-2 text-xs font-bold rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
+                    >
+                      <option value="todas">📍 Todas as Praias de Guarapari</option>
+                      {listaPraiasAtivas.map(p => (
+                        <option key={p.nome} value={p.nome}>{p.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Status */}
+                  <div>
+                    <select
+                      value={filtroRelatorioStatus}
+                      onChange={(e) => setFiltroRelatorioStatus(e.target.value as any)}
+                      className="w-full p-2 text-xs font-bold rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
+                    >
+                      <option value="todos">⚡ Todos os Status</option>
+                      <option value="ativos">🔥 Apenas Chamados em Aberto</option>
+                      <option value="concluidos">✅ Apenas Reencontros Concluídos</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro por Período */}
+                  <div>
+                    <select
+                      value={filtroRelatorioPeriodo}
+                      onChange={(e) => setFiltroRelatorioPeriodo(e.target.value as any)}
+                      className="w-full p-2 text-xs font-bold rounded-xl border border-[#E5E7EB] bg-white outline-none focus:border-[#0B6EFD] text-[#1A1D1F] cursor-pointer"
+                    >
+                      <option value="tudo">📅 Todo o Histórico</option>
+                      <option value="hoje">☀️ Hoje (Últimas 24h)</option>
+                      <option value="7dias">🗓️ Últimos 7 dias (Semana)</option>
+                      <option value="30dias">📆 Últimos 30 dias (Mês)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Indicadores Dinâmicos por Praia */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { praia: 'Praia do Morro', cor: 'border-[#FF6B35]' },
@@ -1859,7 +2209,7 @@ export const AdminPage: React.FC = () => {
                   { praia: 'Praia da Areia Preta', cor: 'border-[#10B981]' },
                   { praia: 'Praia de Meaípe', cor: 'border-[#8B5CF6]' }
                 ].map(({ praia, cor }) => {
-                  const ocosPraia = ocorrencias.filter(o => o.cadastro?.praia_origem === praia || o.tendaMaisProxima?.tenda?.praia === praia);
+                  const ocosPraia = ocorrenciasRelatorios.filter(o => o.cadastro?.praia_origem === praia || o.tendaMaisProxima?.tenda?.praia === praia);
                   const concluidas = ocosPraia.filter(o => o.status === 'Reencontro realizado').length;
                   const taxa = ocosPraia.length > 0 ? Math.round((concluidas / ocosPraia.length) * 100) : 100;
 
@@ -1882,59 +2232,70 @@ export const AdminPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Tabela de Registro Geral com Auditoria LGPD */}
+              {/* Tabela de Registro Geral com Auditoria LGPD Filtrada */}
               <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-extrabold text-sm text-[#1A1D1F]">
-                    Auditoria de Ocorrências Registradas ({ocorrencias.length})
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-sm text-[#1A1D1F]">
+                      Auditoria de Ocorrências Registradas
+                    </h3>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0B6EFD]">
+                      {ocorrenciasRelatorios.length} de {ocorrencias.length}
+                    </span>
+                  </div>
                   <span className="text-[11px] bg-[#EFF6FF] text-[#1D4ED8] font-semibold px-2.5 py-1 rounded-lg border border-[#BFDBFE]">
                     Dados protegidos conforme LGPD
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-[#1A1D1F]">
-                    <thead className="bg-[#F9FAFB] text-[#6B7280] uppercase font-semibold border-b border-[#E5E7EB]">
-                      <tr>
-                        <th className="py-2.5 px-3">Pulseira</th>
-                        <th className="py-2.5 px-3">Criança</th>
-                        <th className="py-2.5 px-3">Responsável</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3">Horário</th>
-                        <th className="py-2.5 px-3">Tenda Próxima</th>
-                        <th className="py-2.5 px-3 text-right">Telefone</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E5E7EB]">
-                      {ocorrencias.map((oco) => (
-                        <tr key={oco.id} className="hover:bg-[#F9FAFB]">
-                          <td className="py-3 px-3 font-mono font-black text-[#FF6B35]">
-                            #{oco.numero_pulseira}
-                          </td>
-                          <td className="py-3 px-3 font-bold">
-                            {oco.cadastro?.nome_crianca || 'Não identificado'}
-                          </td>
-                          <td className="py-3 px-3 text-[#6B7280]">
-                            {oco.cadastro?.nome_responsavel || 'Desconhecido'}
-                          </td>
-                          <td className="py-3 px-3">
-                            <StatusBadge status={oco.status} size="sm" />
-                          </td>
-                          <td className="py-3 px-3 font-mono text-[11px] text-[#6B7280] whitespace-nowrap">
-                            {formatarDataHora(oco.horario_alerta)}
-                          </td>
-                          <td className="py-3 px-3 text-[11px] text-[#6B7280]">
-                            {oco.tendaMaisProxima?.tenda?.nome || 'Pendente'}
-                          </td>
-                          <td className="py-3 px-3 text-right font-mono text-[11px]">
-                            {oco.cadastro?.telefone_contato || '-'}
-                          </td>
+                {ocorrenciasRelatorios.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-[#6B7280]">
+                    Nenhuma ocorrência encontrada com os filtros selecionados.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-[#1A1D1F]">
+                      <thead className="bg-[#F9FAFB] text-[#6B7280] uppercase font-semibold border-b border-[#E5E7EB]">
+                        <tr>
+                          <th className="py-2.5 px-3">Pulseira</th>
+                          <th className="py-2.5 px-3">Criança</th>
+                          <th className="py-2.5 px-3">Responsável</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3">Horário</th>
+                          <th className="py-2.5 px-3">Tenda Próxima</th>
+                          <th className="py-2.5 px-3 text-right">Telefone</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#E5E7EB]">
+                        {ocorrenciasRelatorios.map((oco) => (
+                          <tr key={oco.id} className="hover:bg-[#F9FAFB]">
+                            <td className="py-3 px-3 font-mono font-black text-[#FF6B35]">
+                              #{oco.numero_pulseira}
+                            </td>
+                            <td className="py-3 px-3 font-bold">
+                              {oco.cadastro?.nome_crianca || 'Não identificado'}
+                            </td>
+                            <td className="py-3 px-3 text-[#6B7280]">
+                              {oco.cadastro?.nome_responsavel || 'Desconhecido'}
+                            </td>
+                            <td className="py-3 px-3">
+                              <StatusBadge status={oco.status} size="sm" />
+                            </td>
+                            <td className="py-3 px-3 font-mono text-[11px] text-[#6B7280] whitespace-nowrap">
+                              {formatarDataHora(oco.horario_alerta)}
+                            </td>
+                            <td className="py-3 px-3 text-[11px] text-[#6B7280]">
+                              {oco.tendaMaisProxima?.tenda?.nome || 'Pendente'}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-[11px]">
+                              {oco.cadastro?.telefone_contato || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -2077,16 +2438,6 @@ export const AdminPage: React.FC = () => {
                                   </span>
                                 ) : (
                                   <div className="flex items-center justify-end gap-1.5">
-                                    {/* Editar Operador */}
-                                    <button
-                                      onClick={() => setModalEdicaoOperador(op)}
-                                      className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors inline-flex items-center gap-1"
-                                      title="Editar operador"
-                                    >
-                                      <Edit3 className="w-3.5 h-3.5" />
-                                      <span className="hidden sm:inline">Editar</span>
-                                    </button>
-
                                     {/* Alternar Status Bloqueado / Ativo */}
                                     <button
                                       onClick={async () => {
@@ -2106,6 +2457,15 @@ export const AdminPage: React.FC = () => {
                                       }`}
                                     >
                                       {isBloqueado ? 'Reativar' : 'Bloquear'}
+                                    </button>
+
+                                    {/* Editar Operador (Apenas Ícone) */}
+                                    <button
+                                      onClick={() => setModalEdicaoOperador(op)}
+                                      className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors"
+                                      title="Editar operador"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
                                     </button>
 
                                     {/* Excluir Operador (Com Proteção) */}
