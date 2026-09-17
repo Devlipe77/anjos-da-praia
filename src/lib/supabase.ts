@@ -421,6 +421,73 @@ export const dataService = {
       }
     }
 
+  },
+
+  async cadastrarOperadorDireto(params: {
+    email: string;
+    senha: string;
+    nome: string;
+    tendaId?: string | null;
+    role: 'admin' | 'operador';
+    executadoPorUserId: string;
+  }) {
+    // 1. Validar se quem está executando é coordenador geral (admin)
+    const executor = await this.obterOperador(params.executadoPorUserId);
+    if (!executor || executor.role !== 'admin') {
+      throw new Error('Apenas Coordenadores Gerais podem cadastrar novos usuários diretamente.');
+    }
+
+    if (!params.email || !params.senha || !params.nome) {
+      throw new Error('Preencha todos os campos obrigatórios (nome, e-mail e senha temporária).');
+    }
+
+    if (params.senha.length < 6) {
+      throw new Error('A senha temporária deve conter no mínimo 6 caracteres.');
+    }
+
+    // 2. Usar cliente Supabase isolado (sem persistência de sessão) para NÃO deslogar o coordenador atual
+    const authClient = createClient(
+      supabaseUrl || 'https://placeholder.supabase.co',
+      supabaseAnonKey || 'placeholder-key',
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      }
+    );
+
+    const { data: authData, error: authError } = await authClient.auth.signUp({
+      email: params.email.trim(),
+      password: params.senha,
+      options: {
+        data: {
+          nome: params.nome.trim(),
+          tenda_id: params.tendaId || null,
+          role: params.role || 'operador',
+          status: 'ativo',
+        }
+      }
+    });
+
+    if (authError) throw authError;
+
+    // 3. Garantir que o perfil fique inserido na tabela pública operadores usando o cliente do admin
+    if (authData.user) {
+      const { error: opError } = await supabase.from('operadores').upsert([{
+        id: authData.user.id,
+        nome: params.nome.trim(),
+        email: params.email.trim(),
+        tenda_id: params.tendaId || null,
+        role: params.role || 'operador',
+        status: 'ativo',
+      }]);
+      if (opError) {
+        console.warn('Erro ao inserir registro do operador:', opError);
+      }
+    }
+
     return authData;
   },
 

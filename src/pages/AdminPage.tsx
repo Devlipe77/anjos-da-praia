@@ -48,7 +48,8 @@ import {
   KeyRound,
   Ticket,
   UserMinus,
-  ShieldAlert
+  ShieldAlert,
+  UserPlus
 } from 'lucide-react';
 import { dataService, supabase } from '../lib/supabase';
 import { PulseiraCadastro, Ocorrencia, Tenda, StatusOcorrencia, traduzirErroSupabase, Praia, Operador, ConviteOperador } from '../types';
@@ -120,6 +121,15 @@ export const AdminPage: React.FC = () => {
   const [modalHistoricoOcorrencia, setModalHistoricoOcorrencia] = useState<Ocorrencia | null>(null);
 
   // Modais de Operadores & Convites
+  const [modalNovoUsuario, setModalNovoUsuario] = useState(false);
+  const [formUsuarioNome, setFormUsuarioNome] = useState('');
+  const [formUsuarioEmail, setFormUsuarioEmail] = useState('');
+  const [formUsuarioSenha, setFormUsuarioSenha] = useState('');
+  const [formUsuarioTendaId, setFormUsuarioTendaId] = useState('');
+  const [formUsuarioRole, setFormUsuarioRole] = useState<'operador' | 'admin'>('operador');
+  const [salvandoNovoUsuario, setSalvandoNovoUsuario] = useState(false);
+  const [erroModalUsuario, setErroModalUsuario] = useState<string | null>(null);
+
   const [modalEdicaoOperador, setModalEdicaoOperador] = useState<Operador | null>(null);
   const [modalExclusaoOperador, setModalExclusaoOperador] = useState<Operador | null>(null);
   const [modalNovoConvite, setModalNovoConvite] = useState(false);
@@ -1050,13 +1060,16 @@ export const AdminPage: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-[#0B6EFD] text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
               <UserIcon className="w-4 h-4" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-bold text-[#1A1D1F] truncate" title={operadorNome}>
-                  {operadorNome}
-                </span>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="text-xs font-bold text-[#1A1D1F] truncate" title={operadorNome}>
+                {operadorNome}
+              </div>
+              <div className="text-[10px] text-[#6B7280] truncate" title={operadorEmail}>
+                {operadorEmail}
+              </div>
+              <div className="pt-0.5">
                 <span 
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold text-white shadow-xs flex-shrink-0 tracking-wide ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold text-white shadow-xs tracking-wide ${
                     operadorRole === 'admin' 
                       ? 'bg-[#0B6EFD]' 
                       : 'bg-slate-600'
@@ -1076,7 +1089,6 @@ export const AdminPage: React.FC = () => {
                   )}
                 </span>
               </div>
-              <div className="text-[10px] text-[#6B7280] truncate">{operadorEmail}</div>
             </div>
           </div>
 
@@ -2401,20 +2413,39 @@ export const AdminPage: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2">
                   {operadorRole === 'admin' && (
-                    <button
-                      onClick={() => {
-                        setFormConviteTendaId('');
-                        setFormConviteValidadeHoras(24);
-                        setFormConviteRole('operador');
-                        setFormConviteUsos(1);
-                        setConviteGeradoRecente(null);
-                        setModalNovoConvite(true);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-[#0B6EFD] hover:bg-[#0857CC] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
-                    >
-                      <Ticket className="w-4 h-4" />
-                      <span>Gerar Link de Convite</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setFormUsuarioNome('');
+                          setFormUsuarioEmail('');
+                          setFormUsuarioSenha('');
+                          setFormUsuarioTendaId('');
+                          setFormUsuarioRole('operador');
+                          setErroModalUsuario(null);
+                          setModalNovoUsuario(true);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+                        title="Cadastrar um operador ou coordenador diretamente no sistema"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span>Novo Usuário</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setFormConviteTendaId('');
+                          setFormConviteValidadeHoras(24);
+                          setFormConviteRole('operador');
+                          setFormConviteUsos(1);
+                          setConviteGeradoRecente(null);
+                          setModalNovoConvite(true);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-[#0B6EFD] hover:bg-[#0857CC] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all"
+                      >
+                        <Ticket className="w-4 h-4" />
+                        <span>Gerar Link de Convite</span>
+                      </button>
+                    </>
                   )}
 
                   <div className="px-3 py-2 rounded-xl bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-xs font-bold flex items-center gap-1.5">
@@ -2499,14 +2530,15 @@ export const AdminPage: React.FC = () => {
                             <td className="py-3.5 px-4 text-right">
                               {operadorRole === 'admin' ? (
                                 isVoce ? (
-                                  <button
-                                    onClick={() => setModalEdicaoOperador(op)}
-                                    className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors inline-flex items-center gap-1"
-                                    title="Editar meus dados"
-                                  >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    <span>Editar</span>
-                                  </button>
+                                  <div className="flex items-center justify-end">
+                                    <button
+                                      onClick={() => setModalEdicaoOperador(op)}
+                                      className="p-1.5 text-[#0B6EFD] hover:bg-[#EFF6FF] rounded-lg transition-colors"
+                                      title="Editar meus dados"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 ) : isOutroAdmin ? (
                                   <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg" title="Por segurança institucional, um Coordenador não pode excluir ou alterar outro Coordenador">
                                     🛡️ Coordenador Protegido
@@ -3504,6 +3536,177 @@ export const AdminPage: React.FC = () => {
                 Confirmar Remoção
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CADASTRO DIRETO DE USUÁRIO (COORDENADOR GERAL) */}
+      {/* ========================================================= */}
+      {modalNovoUsuario && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 border border-[#E5E7EB] shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-50 text-[#16A34A]">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#1A1D1F]">Cadastrar Novo Usuário</h3>
+                  <p className="text-[11px] text-[#6B7280]">Criação direta de credenciais de acesso</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setModalNovoUsuario(false); setErroModalUsuario(null); }}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {erroModalUsuario && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                <span>{erroModalUsuario}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!operadorUserId) return;
+                setErroModalUsuario(null);
+                setSalvandoNovoUsuario(true);
+
+                try {
+                  await dataService.cadastrarOperadorDireto({
+                    nome: formUsuarioNome,
+                    email: formUsuarioEmail,
+                    senha: formUsuarioSenha,
+                    tendaId: formUsuarioTendaId || null,
+                    role: formUsuarioRole,
+                    executadoPorUserId: operadorUserId,
+                  });
+
+                  showToast(`Usuário ${formUsuarioNome} cadastrado com sucesso!`, 'sucesso');
+                  setModalNovoUsuario(false);
+                  carregarDados();
+                } catch (err: any) {
+                  setErroModalUsuario(err.message || 'Erro ao cadastrar usuário.');
+                } finally {
+                  setSalvandoNovoUsuario(false);
+                }
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Nome Completo */}
+                <div className="sm:col-span-2">
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: João da Silva"
+                    value={formUsuarioNome}
+                    onChange={(e) => setFormUsuarioNome(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] outline-none focus:border-[#16A34A] focus:bg-white text-xs"
+                  />
+                </div>
+
+                {/* E-mail de Acesso */}
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">E-mail de Login *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="joao@anjosdapraia.org"
+                    value={formUsuarioEmail}
+                    onChange={(e) => setFormUsuarioEmail(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] outline-none focus:border-[#16A34A] focus:bg-white text-xs"
+                  />
+                </div>
+
+                {/* Senha Temporária */}
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Senha Temporária * (min. 6)</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    value={formUsuarioSenha}
+                    onChange={(e) => setFormUsuarioSenha(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] outline-none focus:border-[#16A34A] focus:bg-white text-xs font-mono"
+                  />
+                </div>
+
+                {/* Nível de Acesso (Role) */}
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Função / Nível de Acesso *</label>
+                  <select
+                    value={formUsuarioRole}
+                    onChange={(e) => setFormUsuarioRole(e.target.value as any)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold text-xs outline-none focus:border-[#16A34A] cursor-pointer"
+                  >
+                    <option value="operador">Voluntário / Operador de Tenda</option>
+                    <option value="admin">Coordenador Geral (Admin Total)</option>
+                  </select>
+                </div>
+
+                {/* Posto / Tenda Atribuída */}
+                <div>
+                  <label className="block font-bold mb-1 text-[#1A1D1F]">Posto / Tenda de Atuação</label>
+                  <select
+                    value={formUsuarioTendaId}
+                    onChange={(e) => setFormUsuarioTendaId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-[#E5E7EB] bg-white font-bold text-xs outline-none focus:border-[#16A34A] cursor-pointer"
+                  >
+                    <option value="">Qualquer tenda / Geral</option>
+                    {tendas.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nome} ({t.praia})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 space-y-0.5">
+                <span className="font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  Cadastro Instantâneo:
+                </span>
+                <p>O usuário já poderá fazer login imediatamente com o e-mail e a senha definidos acima.</p>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-[#E5E7EB]">
+                <button
+                  type="button"
+                  disabled={salvandoNovoUsuario}
+                  onClick={() => { setModalNovoUsuario(false); setErroModalUsuario(null); }}
+                  className="flex-1 py-2.5 border border-[#E5E7EB] font-bold rounded-xl text-[#6B7280] hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoNovoUsuario}
+                  className="flex-1 py-2.5 bg-[#16A34A] hover:bg-[#15803D] text-white font-bold rounded-xl shadow transition-all flex items-center justify-center gap-1.5"
+                >
+                  {salvandoNovoUsuario ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Cadastrando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Cadastrar Usuário</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
