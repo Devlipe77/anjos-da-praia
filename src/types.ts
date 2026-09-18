@@ -149,6 +149,9 @@ export function traduzirErroSupabase(erro: any): string {
 
   // 3. Foreign Key / Integridade Relacional (PostgreSQL 23503)
   if (codigo === '23503' || textoCompleto.includes('violates foreign key')) {
+    if (textoCompleto.includes('ocorrencias_numero_pulseira_fkey') || textoCompleto.includes('cadastros_pulseiras') || textoCompleto.includes('numero_pulseira')) {
+      return 'Esta pulseira ainda não foi cadastrada no sistema! Verifique o número digitado na pulseira ou realize o cadastro no posto de apoio da praia.';
+    }
     return 'Não foi possível concluir a ação pois este item está vinculado a outros registros no sistema.';
   }
 

@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
   longitude NUMERIC(10, 7) NOT NULL,
   precisao_metros NUMERIC(8, 2) DEFAULT 0,
   status VARCHAR(30) DEFAULT 'Criança localizada' CHECK (
-    status IN ('Criança localizada', 'Equipe a caminho', 'Criança recebida', 'Responsáveis localizados', 'Reencontro realizado')
+    status IN ('Criança localizada', 'Equipe a caminho', 'Criança na tenda', 'Pais contatados', 'Reencontro realizado')
   ),
   horario_alerta TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   finalizada_em TIMESTAMP WITH TIME ZONE,
@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
   tenda_atendimento_id UUID REFERENCES tendas(id) ON DELETE SET NULL,
   historico_status JSONB DEFAULT '[]'::jsonb
 );
+
+-- Se a constraint UNIQUE global tiver sido criada na coluna numero_pulseira, remove-a para permitir histórico
+ALTER TABLE ocorrencias DROP CONSTRAINT IF EXISTS ocorrencias_numero_pulseira_key;
 
 -- 4. Tabela de Perfil de Operadores da Tenda (vinculada ao Supabase Auth)
 CREATE TABLE IF NOT EXISTS operadores (
@@ -81,6 +84,14 @@ CREATE INDEX IF NOT EXISTS idx_ocorrencias_pulseira ON ocorrencias(numero_pulsei
 CREATE INDEX IF NOT EXISTS idx_ocorrencias_status ON ocorrencias(status);
 CREATE INDEX IF NOT EXISTS idx_tendas_ativa ON tendas(ativa);
 CREATE INDEX IF NOT EXISTS idx_operadores_status ON operadores(status);
+
+-- Regra de negócio: Impede múltiplos chamados simultâneos ABERTOS para a mesma pulseira,
+-- mas permite novas ocorrências após a finalização do atendimento ('Reencontro realizado').
+DROP INDEX IF EXISTS idx_ocorrencia_aberta_unica;
+DROP INDEX IF EXISTS idx_ocorrencias_aberta_unica;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ocorrencias_aberta_unica 
+ON ocorrencias(numero_pulseira) 
+WHERE status != 'Reencontro realizado';
 
 -- 6. Habilitar Realtime para escuta em tempo real no dashboard
 ALTER PUBLICATION supabase_realtime ADD TABLE ocorrencias;
@@ -113,6 +124,7 @@ CREATE POLICY "Gerenciamento de tendas" ON tendas FOR ALL TO authenticated USING
 
 -- Políticas para Cadastros de Pulseiras (LGPD: Apenas operadores autenticados podem ver dados de crianças/pais)
 DROP POLICY IF EXISTS "Acesso a cadastros de pulseiras" ON cadastros_pulseiras;
+DROP POLICY IF EXISTS "Acesso restrito a operadores autenticados" ON cadastros_pulseiras;
 CREATE POLICY "Acesso restrito a operadores autenticados" ON cadastros_pulseiras 
   FOR ALL TO authenticated USING (true);
 
@@ -123,16 +135,22 @@ DROP POLICY IF EXISTS "Banhista anônimo pode emitir alerta" ON ocorrencias;
 CREATE POLICY "Banhista anônimo pode emitir alerta" ON ocorrencias 
   FOR INSERT TO anon, authenticated WITH CHECK (true);
 
--- Apenas operadores autenticados podem visualizar e gerenciar o histórico de ocorrências
+-- Permite leitura de ocorrências (essencial para retorno imediato do .select() no alerta do banhista e escuta Realtime)
 DROP POLICY IF EXISTS "Leitura de ocorrencias" ON ocorrencias;
 DROP POLICY IF EXISTS "Operador pode visualizar ocorrencias" ON ocorrencias;
-CREATE POLICY "Operador pode visualizar ocorrencias" ON ocorrencias 
-  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Leitura publica de ocorrencias" ON ocorrencias;
+CREATE POLICY "Leitura publica de ocorrencias" ON ocorrencias 
+  FOR SELECT TO anon, authenticated USING (true);
 
+-- Apenas operadores autenticados podem atualizar status ou excluir ocorrências
 DROP POLICY IF EXISTS "Atualizacao e exclusao de ocorrencias" ON ocorrencias;
 DROP POLICY IF EXISTS "Operador pode atualizar ocorrencias" ON ocorrencias;
 CREATE POLICY "Operador pode atualizar ocorrencias" ON ocorrencias 
   FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Operador pode excluir ocorrencias" ON ocorrencias;
+CREATE POLICY "Operador pode excluir ocorrencias" ON ocorrencias 
+  FOR DELETE TO authenticated USING (true);
 
 -- Políticas para Operadores:
 -- Apenas usuários autenticados podem consultar e gerenciar a equipe

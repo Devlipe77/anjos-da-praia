@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Técnico — Anjos da Praia</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+    
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.35;
+      font-size: 8.5pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      height: 275mm;
+      max-height: 275mm;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    /* Cabeçalho Principal */
+    .header {
+      border-bottom: 2.5px solid #ff6b35;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .brand-title {
+      font-size: 19pt;
+      font-weight: 900;
+      color: #ff6b35;
+      letter-spacing: -0.5px;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .brand-subtitle {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 3px;
+    }
+
+    .header-meta {
+      text-align: right;
+      font-size: 7.5pt;
+      color: #64748b;
+      line-height: 1.25;
+    }
+
+    .badge-hackathon {
+      display: inline-block;
+      background-color: #fff1f2;
+      color: #e11d48;
+      border: 1px solid #fecdd3;
+      padding: 1.5px 6px;
+      border-radius: 9999px;
+      font-size: 7pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    /* Títulos de Seção */
+    h2 {
+      font-size: 10.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-left: 3.5px solid #0b6efd;
+      padding-left: 6px;
+      margin-top: 8px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    p {
+      margin: 0 0 6px 0;
+      text-align: justify;
+    }
+
+    /* Tabelas Compactas e Elegantes */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 8px 0;
+      font-size: 8pt;
+    }
+
+    th {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-weight: 800;
+      text-align: left;
+      padding: 5px 8px;
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    td {
+      padding: 4.5px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #fbfcfe;
+    }
+
+    .tech-tag {
+      font-weight: 700;
+      color: #0b6efd;
+      white-space: nowrap;
+    }
+
+    .version-tag {
+      font-size: 7pt;
+      color: #64748b;
+      font-family: Consolas, monospace;
+    }
+
+    /* Grid de Cards */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 6px 0 8px 0;
+    }
+
+    .feature-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background-color: #fbfcfe;
+    }
+
+    .feature-card-title {
+      font-size: 8.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 2.5px;
+    }
+
+    .feature-card-title .icon {
+      font-size: 9.5pt;
+    }
+
+    .feature-card-desc {
+      font-size: 7.5pt;
+      color: #475569;
+      margin: 0;
+      line-height: 1.3;
+      text-align: left;
+    }
+
+    /* Callouts */
+    .callout {
+      border-left: 3px solid #16a34a;
+      background-color: #f0fdf4;
+      padding: 6px 9px;
+      border-radius: 0 6px 6px 0;
+      margin: 6px 0;
+      font-size: 7.5pt;
+      line-height: 1.35;
+    }
+
+    .callout strong {
+      color: #166534;
+    }
+
+    .flow-box {
+      background-color: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 7pt;
+      line-height: 1.3;
+      color: #1e293b;
+      margin: 5px 0 8px 0;
+    }
+
+    .footer {
+      font-size: 7pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 3px;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <div class="page">
+    <div>
+      <div class="header">
+        <div>
+          <div class="badge-hackathon">Ciência da Computação 2026.2 • Anhanguera Guarapari</div>
+          <h1 class="brand-title">ANJOS DA PRAIA</h1>
+          <div class="brand-subtitle">Relatório Técnico de Arquitetura, Stack Tecnológica & Funcionalidades</div>
+        </div>
+        <div class="header-meta">
+          <strong>Desafio 3:</strong> Apoio à Localização Infantil<br>
+          <strong>Data de Emissão:</strong> 16/09/2026<br>
+          <strong>Ambiente:</strong> Produção (Vercel & Supabase Cloud)
+        </div>
+      </div>
+
+      <h2>1. Visão Executiva & Contexto do Projeto</h2>
+      <p>
+        O <strong>Anjos da Praia</strong> é uma plataforma web e Progressive Web App (PWA) de missão crítica, concebida para mitigar e solucionar com máxima agilidade o desaparecimento temporário de crianças nas praias de Guarapari (ES). Em momentos de alta lotação na orla, a perda de contato visual causa desespero imediato aos pais e sobrecarga aos postos de socorro.
+      </p>
+      <p>
+        O pilar central do projeto é a <strong>fricção zero</strong>: o banhista que localiza uma criança não precisa instalar aplicativo, efetuar cadastro ou criar senhas. Apenas aponta a câmera do celular para o QR Code da pulseira e, em um único toque, envia a coordenada GPS exata para os operadores dos postos e salva-vidas.
+      </p>
+
+      <div class="callout">
+        <strong>Conformidade e Sigilo (LGPD):</strong> O banhista que escaneia a pulseira <em>jamais visualiza</em> o nome da criança, telefones ou identidade dos responsáveis. Todos os dados sensíveis ficam protegidos no backend e são acessíveis exclusivamente aos operadores autenticados do sistema.
+      </div>
+
+      <h2>2. Stack Tecnológica & Justificativa Técnica</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 22%;">Camada</th>
+            <th style="width: 30%;">Tecnologia & Versão</th>
+            <th style="width: 48%;">Papel Técnico & Justificativa de Engenharia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Frontend Core</strong></td>
+            <td><span class="tech-tag">React</span> <span class="version-tag">v18.3.1</span> &nbsp;|&nbsp; <span class="tech-tag">TypeScript</span> <span class="version-tag">v5.7.3</span></td>
+            <td>SPA com tipagem estrita de ponta a ponta, componentização desacoplada, alta previsibilidade de estado e zero erros de runtime em produção.</td>
+          </tr>
+          <tr>
+            <td><strong>Build & Bundler</strong></td>
+            <td><span class="tech-tag">Vite</span> <span class="version-tag">v6.2.0</span></td>
+            <td>Compilação ultrarrápida com Rollup e Hot Module Replacement instantâneo; geração de bundles otimizados com code-splitting.</td>
+          </tr>
+          <tr>
+            <td><strong>Estilização</strong></td>
+            <td><span class="tech-tag">Tailwind CSS</span> <span class="version-tag">v3.4.17</span> + <span class="tech-tag">PostCSS</span></td>
+            <td>Utility-first CSS compilado e minificado; interface mobile-first de alto contraste para visibilidade nítida sob luz solar intensa.</td>
+          </tr>
+          <tr>
+            <td><strong>Backend & Banco</strong></td>
+            <td><span class="tech-tag">Supabase Cloud</span> &nbsp;|&nbsp; <span class="tech-tag">PostgreSQL 15</span></td>
+            <td>Banco relacional robusto com DDL formal, integridade referencial, Row Level Security (RLS) e índices otimizados para consultas geográficas.</td>
+          </tr>
+          <tr>
+            <td><strong>Realtime</strong></td>
+            <td><span class="tech-tag">@supabase/supabase-js</span> <span class="version-tag">v2.49.1</span></td>
+            <td>Escuta reativa via WebSockets nativos do PostgreSQL. Novas ocorrências e mudanças de status são sincronizadas no painel em milissegundos.</td>
+          </tr>
+          <tr>
+            <td><strong>Mapas & GIS</strong></td>
+            <td><span class="tech-tag">Leaflet</span> <span class="version-tag">v1.9.4</span> + <span class="tech-tag">Esri World Street Map</span></td>
+            <td>Camada cartográfica sem bloqueio por API Key e sem restrições de CORS/403, plotando postos, raios de precisão do GPS e atalhos de rota.</td>
+          </tr>
+          <tr>
+            <td><strong>Mobile & PWA</strong></td>
+            <td><span class="tech-tag">vite-plugin-pwa</span> <span class="version-tag">v1.3.0</span> + <span class="tech-tag">Workbox</span></td>
+            <td>Instalação nativa em Android e iOS via banner "Instalar Aplicativo", registro de Service Worker e cache inteligente de assets estáticos.</td>
+          </tr>
+          <tr>
+            <td><strong>Validação</strong></td>
+            <td><span class="tech-tag">@felipe7/valida-form</span> <span class="version-tag">v1.0.2</span></td>
+            <td>Biblioteca NPM customizada para validação semântica de e-mails corporativos e prevenção de dados corrompidos no cadastro de operadores.</td>
+          </tr>
+          <tr>
+            <td><strong>QR Code & Óptica</strong></td>
+            <td><span class="tech-tag">html5-qrcode</span> <span class="version-tag">v2.3.8</span> &nbsp;|&nbsp; <span class="tech-tag">qrcode.react</span> <span class="version-tag">v4.2.0</span></td>
+            <td>Leitura óptica instantânea via câmera traseira/frontal e motor vetorial para renderização e impressão de folhas de pulseiras em lote.</td>
+          </tr>
+          <tr>
+            <td><strong>Hospedagem / CDN</strong></td>
+            <td><span class="tech-tag">Vercel Edge Network</span></td>
+            <td>Distribuição global em borda com CI/CD integrado ao GitHub e provisionamento de SSL/HTTPS (obrigatório para uso da Geolocation API).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <span>Anjos da Praia — Relatório Técnico de Engenharia de Software</span>
+      <span>Página 1 de 2</span>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <div class="page">
+    <div>
+      <div class="header">
+        <div>
+          <h1 class="brand-title">ANJOS DA PRAIA</h1>
+          <div class="brand-subtitle">Fluxo Operacional, Funcionalidades do Sistema & Modelo de Dados</div>
+        </div>
+        <div class="header-meta">
+          <strong>Arquitetura de Software</strong><br>
+          Página 2 de 2
+        </div>
+      </div>
+
+      <h2>3. Ciclo de Vida da Ocorrência</h2>
+      <div class="flow-box">
+[Família / Criança] ──▶ [Tenda / Posto de Apoio] (Cadastro no sistema & fixação da pulseira impermeável)
+        │
+        ▼ (Caso a criança se afaste momentaneamente)
+[Banhista Escaneia QR Code] ──▶ Abre URL web direta (/alerta?pulseira=XXXX) sem baixar app
+        │
+        ▼
+[Banhista Clica "Enviar Minha Localização"] ──▶ Captura GPS nativo (HTML5 Geolocation API)
+        │
+        ▼
+[Disparo Supabase Realtime via WebSockets] ──▶ Alerta sonoro (sirene) & modal no Painel Admin (/admin)
+        ├─▶ Plotagem automática no Mapa Leaflet com círculo de precisão (m)
+        ├─▶ Cálculo de proximidade (Fórmula de Haversine) identificando o posto mais perto
+        ├─▶ 1-Clique: "Traçar Rota no Google Maps" para direcionar o socorrista em campo
+        └─▶ 1-Clique: Acionar Responsáveis via Ligação ou WhatsApp com mensagem pronta
+        │
+        ▼
+[Linha do Tempo de Auditoria]: 1. Criança localizada ➔ 2. Equipe a caminho ➔ 3. Criança recebida
+➔ 4. Responsáveis localizados ➔ 5. Reencontro realizado 🎉 (Status terminal com bloqueio imutável)
+      </div>
+
+      <h2>4. Módulos e Funcionalidades Principais</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">📍</span> Módulo do Banhista (/alerta)</div>
+          <p class="feature-card-desc">Interface ultrarresponsiva para envio emergencial de GPS em até 3 segundos, dispensando login ou formulários.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">🔔</span> Monitoramento Realtime</div>
+          <p class="feature-card-desc">Sincronização reativa de novos chamados com sirene de alerta configurável e notificações toast para o operador.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">🗺️</span> Mapa Geoespacial Interativo</div>
+          <p class="feature-card-desc">Visualização com tiles Esri, pinos coloridos por status, rota automatizada e medição de distância em metros.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">🗂️</span> Gestão de Cadastros de Pulseiras</div>
+          <p class="feature-card-desc">CRUD integral de pulseiras com busca instantânea por número ou responsável, dados médicos e tenda emissora.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">🏖️</span> Base Oficial de Praias & Postos</div>
+          <p class="feature-card-desc">Tabela relacional com 32 praias catalogadas de Guarapari com GPS padrão para agilizar o cadastro de novos postos.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">⛺</span> Alocação de Operador por Posto</div>
+          <p class="feature-card-desc">Associação do operador autenticado ao posto em operação no Supabase com botão 1-clique e indicador na barra lateral.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">📜</span> Auditoria com Histórico Cronológico</div>
+          <p class="feature-card-desc">Trilha gravada em JSONB com data/hora exata (dd/mm/aaaa hh:mm:ss) e operador para cada alteração de status.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-title"><span class="icon">🖨️</span> Impressão em Massa & Relatórios</div>
+          <p class="feature-card-desc">Geração de folhas de etiquetas com QR Code em grade para gráfica e exportação de base de ocorrências em CSV.</p>
+        </div>
+      </div>
+
+      <h2>5. Modelo Relacional de Dados (PostgreSQL / Supabase)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 24%;">Tabela</th>
+            <th style="width: 36%;">Chaves e Campos Críticos</th>
+            <th style="width: 40%;">Função no Sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>praias</strong></td>
+            <td><code>id (PK)</code>, <code>nome (UK)</code>, <code>latitude_padrao</code>, <code>longitude_padrao</code></td>
+            <td>Catálogo mestre das praias de Guarapari para alimentação de seletores e GPS.</td>
+          </tr>
+          <tr>
+            <td><strong>tendas</strong></td>
+            <td><code>id (PK)</code>, <code>nome</code>, <code>praia_id (FK)</code>, <code>latitude</code>, <code>longitude</code>, <code>ativa</code></td>
+            <td>Cadastro físico dos postos de salvamento e bases de apoio na orla.</td>
+          </tr>
+          <tr>
+            <td><strong>cadastros_pulseiras</strong></td>
+            <td><code>id (PK)</code>, <code>numero_pulseira (UK)</code>, <code>nome_responsavel</code>, <code>telefone</code></td>
+            <td>Armazenamento sigiloso dos dados familiares vinculados ao código da pulseira.</td>
+          </tr>
+          <tr>
+            <td><strong>ocorrencias</strong></td>
+            <td><code>id (PK)</code>, <code>numero_pulseira (FK)</code>, <code>status</code>, <code>historico_status (JSONB)</code></td>
+            <td>Chamados de alerta gerados na praia com histórico completo de auditoria.</td>
+          </tr>
+          <tr>
+            <td><strong>operadores</strong></td>
+            <td><code>id (PK -> auth.users)</code>, <code>nome</code>, <code>email</code>, <code>tenda_id (FK)</code></td>
+            <td>Registro dos operadores do sistema com seu posto de operação vinculado.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout" style="border-left-color: #0b6efd; background-color: #eff6ff;">
+        <strong>Conclusão Técnica:</strong> A solução conjuga velocidade de carregamento em borda, resiliência de dados em PostgreSQL e tempo de resposta imediato via WebSockets, garantindo aos guarda-vidas e familiares uma ferramenta decisiva na proteção das crianças nas praias.
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Anjos da Praia — Relatório Técnico de Engenharia de Software</span>
+      <span>Página 2 de 2</span>
+    </div>
+  </div>
+
+</body>
+</html>

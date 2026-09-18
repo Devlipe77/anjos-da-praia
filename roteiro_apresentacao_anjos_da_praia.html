@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Roteiro de Apresentação — Anjos da Praia</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
+    
+    @page {
+      size: A4;
+      margin: 12mm 14mm 12mm 14mm;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1A1D1F;
+      background: #FFFFFF;
+      margin: 0;
+      padding: 0;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .header-box {
+      border-bottom: 3px solid #FF6B35;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-left h1 {
+      font-size: 19px;
+      font-weight: 900;
+      color: #FF6B35;
+      margin: 0 0 2px 0;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-left .subtitle {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0B6EFD;
+      margin: 0;
+    }
+
+    .header-left .subinfo {
+      font-size: 10px;
+      color: #6B7280;
+      margin-top: 2px;
+    }
+
+    .badge-time {
+      background: #FEF3C7;
+      border: 1px solid #FDE68A;
+      color: #92400E;
+      font-weight: 800;
+      font-size: 10.5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      text-align: right;
+    }
+
+    .team-summary {
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .team-summary .title {
+      font-weight: 800;
+      font-size: 10.5px;
+      color: #1A1D1F;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .team-members {
+      display: flex;
+      gap: 8px;
+    }
+
+    .member-tag {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      color: #1D4ED8;
+      font-weight: 700;
+      font-size: 10px;
+      padding: 2.5px 7px;
+      border-radius: 5px;
+    }
+
+    .section-card {
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: #FFFFFF;
+      page-break-inside: avoid;
+    }
+
+    .section-header {
+      padding: 7px 12px;
+      background: #F9FAFB;
+      border-bottom: 1px solid #E5E7EB;
+      border-top-left-radius: 7px;
+      border-top-right-radius: 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .speaker-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speaker-name {
+      font-weight: 900;
+      font-size: 12.5px;
+      color: #1A1D1F;
+    }
+
+    .speaker-badge {
+      background: #FF6B35;
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .time-slot {
+      font-family: monospace;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #4B5563;
+      background: #E5E7EB;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .section-body {
+      padding: 8px 12px;
+    }
+
+    .theme-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0B6EFD;
+      margin-bottom: 5px;
+    }
+
+    .topic-list {
+      margin: 0;
+      padding-left: 16px;
+    }
+
+    .topic-list li {
+      margin-bottom: 3.5px;
+      font-size: 10.5px;
+      color: #374151;
+    }
+
+    .topic-list strong {
+      color: #111827;
+    }
+
+    .quote-box {
+      margin-top: 5px;
+      padding: 5px 9px;
+      background: #FFFBEB;
+      border-left: 3px solid #F59E0B;
+      font-size: 10px;
+      font-style: italic;
+      color: #78350F;
+      border-radius: 0 5px 5px 0;
+    }
+
+    .footer-tips {
+      margin-top: 10px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      page-break-inside: avoid;
+    }
+
+    .footer-tips h4 {
+      margin: 0 0 4px 0;
+      color: #166534;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .footer-tips ul {
+      margin: 0;
+      padding-left: 15px;
+      font-size: 9.5px;
+      color: #14532D;
+    }
+
+    .footer-tips li {
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <div class="header-box">
+    <div class="header-left">
+      <h1>Anjos da Praia — Roteiro de Apresentação</h1>
+      <div class="subtitle">Hackathon Ciência da Computação 2026.2 • Faculdade Anhanguera de Guarapari</div>
+      <div class="subinfo">Desafio 3: Tecnologia aplicada à localização e reencontro de crianças nas praias de Guarapari - ES</div>
+    </div>
+    <div class="badge-time">
+      ⏱️ TEMPO LIMITE: 10 MIN<br>
+      <span style="font-weight: 400; font-size: 9px; color: #78350F;">Auditório Principal (18/09/2026)</span>
+    </div>
+  </div>
+
+  <!-- RESUMO DA EQUIPE -->
+  <div class="team-summary">
+    <div class="title">Integrantes da Equipe:</div>
+    <div class="team-members">
+      <span class="member-tag">Felipe</span>
+      <span class="member-tag">Eduarda</span>
+      <span class="member-tag">Daniel</span>
+      <span class="member-tag">Cadu</span>
+      <span class="member-tag">Nicolas</span>
+    </div>
+  </div>
+
+  <!-- BLOCO 1: FELIPE -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">1. Felipe</span>
+        <span class="speaker-badge">Abertura & Pitch</span>
+      </div>
+      <div class="time-slot">00:00 - 01:45 (1m45s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">O Problema Real, Contextualização e Proposta de Valor</div>
+      <ul class="topic-list">
+        <li><strong>Abertura e Boas-Vindas:</strong> Cumprimentar a banca avaliadora, professores e colegas. Apresentar a equipe e o propósito do Anjos da Praia.</li>
+        <li><strong>O Desafio na Orla:</strong> Destacar as 39 edições já realizadas pela Associação no ES e a fragilidade do método analógico atual (papel, caneta e pulseiras sem rastreabilidade em dias de praias lotadas).</li>
+        <li><strong>A Dor Central:</strong> Em dias de pico, a perda momentânea gera pânico. Quem acha a criança não sabe onde estão os pais; o posto de guarda-vidas não sabe onde a criança está.</li>
+        <li><strong>Nossa Solução:</strong> Uma plataforma com tempo de resposta imediato que integra banhistas, voluntários e o Corpo de Bombeiros sem exigir download de aplicativo.</li>
+      </ul>
+      <div class="quote-box">
+        "Conectamos banhistas, voluntários e o Corpo de Bombeiros em segundos para transformar desespero em reencontro rápido."
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 2: EDUARDA -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">2. Eduarda</span>
+        <span class="speaker-badge">UX / UI & Banhista</span>
+      </div>
+      <div class="time-slot">01:45 - 03:45 (2m00s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">Jornada do Usuário, Usabilidade Extrema e Alerta via QR Code</div>
+      <ul class="topic-list">
+        <li><strong>Princípio de UX:</strong> Sob sol e emergência, a interface precisa ser minimalista e com carregamento instantâneo.</li>
+        <li><strong>Fluxo de Cadastro nas Tendas:</strong> Cadastro em menos de 20 segundos coletando apenas dados essenciais (nome da criança, do responsável e telefone com WhatsApp).</li>
+        <li><strong>Fluxo do Banhista que Encontra a Criança:</strong>
+          - Escaneia a câmera nativa do celular no QR Code da pulseira.<br>
+          - Autoriza a geolocalização com 1 clique (HTML5 Geolocation com precisão em metros).<br>
+          - Digita apenas o número da pulseira (ex: #1004) e dispara o socorro imediatamente.
+        </li>
+        <li><strong>Emissão de Pulseiras:</strong> Geração de lotes de impressão física e QR Codes individuais padronizados.</li>
+      </ul>
+      <div class="quote-box">
+        "Zero atrito: nenhuma senha ou download para o banhista. Escaneou, localizou, chamou."
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 3: DANIEL -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">3. Daniel</span>
+        <span class="speaker-badge">Demo do MVP ao Vivo</span>
+      </div>
+      <div class="time-slot">03:45 - 05:45 (2m00s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">Demonstração Prática do Protótipo e Central de Monitoramento</div>
+      <ul class="topic-list">
+        <li><strong>Disparo Realtime ao Vivo:</strong> Emissão do alarme pelo celular e visualização da sirene sonoro-visual no painel administrativo via Supabase Realtime sem recarregar a tela.</li>
+        <li><strong>Mapa Interativo Operacional (Leaflet):</strong>
+          - Pinos com a paleta oficial das 5 etapas: <i>Criança localizada (Coral), Equipe a caminho (Azul), Criança na tenda (Roxo), Pais contatados (Azul Claro) e Reencontro realizado (Verde 🎉)</i>.<br>
+          - Cálculo geodésico automático da <strong>tenda mais próxima</strong> (fórmula de Haversine).<br>
+          - Botão direto de rota no Google Maps para o quadriciclo ou guarda-vidas em campo.
+        </li>
+        <li><strong>Filtros Operacionais:</strong> Filtragem rápida por tenda, praia de Guarapari e situação do atendimento.</li>
+      </ul>
+      <div class="quote-box">
+        "Telemetria visual em tempo real: a central enxerga toda a orla e direciona a equipe exata."
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 4: CADU -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">4. Cadu</span>
+        <span class="speaker-badge">Engenharia & Dados</span>
+      </div>
+      <div class="time-slot">05:45 - 07:30 (1m45s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">Arquitetura Técnica, Engenharia de Software e Banco de Dados</div>
+      <ul class="topic-list">
+        <li><strong>Stack Front-end:</strong> React 18, TypeScript com tipagem estrita contra quebras em tempo de execução, Tailwind CSS e Vite (build otimizado em 7 segundos).</li>
+        <li><strong>Tecnologia PWA (Progressive Web App):</strong> Funcionamento em modo app nativo para celular e desktop, service workers e suporte para conexões instáveis na orla.</li>
+        <li><strong>Modelagem Relacional (PostgreSQL):</strong>
+          - <code>praias</code> (31 praias oficiais de Guarapari com coordenadas fixas).<br>
+          - <code>tendas</code>, <code>cadastros_pulseiras</code> e <code>ocorrencias</code>.<br>
+          - <code>historico_status</code> (JSONB): Trilha de auditoria inalterável registrando cada mudança de status, data/hora e operador responsável.
+        </li>
+      </ul>
+      <div class="quote-box">
+        "Robustez de nível governamental: tipagem segura, integridade referencial e auditoria completa."
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 5: NICOLAS -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">5. Nicolas</span>
+        <span class="speaker-badge">Segurança & LGPD</span>
+      </div>
+      <div class="time-slot">07:30 - 09:15 (1m45s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">Segurança da Informação, LGPD e Gestão de Voluntários</div>
+      <ul class="topic-list">
+        <li><strong>Privacidade e LGPD:</strong> Proteção estrita dos dados sensíveis de crianças via Row Level Security (RLS). O banhista anônimo apenas envia localização; ele nunca tem acesso a dados pessoais ou telefones.</li>
+        <li><strong>Controle de Acesso em Dois Níveis:</strong>
+          - <i>Coordenador Geral (Admin):</i> Cadastro direto de operadores sem deslogar a sessão, relatórios auditáveis e exportação de planilha CSV para a Prefeitura e Bombeiros.<br>
+          - <i>Operador / Voluntário:</i> Focado no atendimento e registro do seu posto.
+        </li>
+        <li><strong>Sistema de Convites Temporais:</strong> Emissão de links de convite com validade (ex: 24h) e limite de uso, com invalidação automática no banco de dados.</li>
+      </ul>
+      <div class="quote-box">
+        "Segurança desde o primeiro bit: proteção de menores na internet e controle de equipe no terreno."
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 6: FELIPE -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="speaker-info">
+        <span class="speaker-name">6. Felipe</span>
+        <span class="speaker-badge">Fechamento & Impacto</span>
+      </div>
+      <div class="time-slot">09:15 - 10:00 (45s)</div>
+    </div>
+    <div class="section-body">
+      <div class="theme-title">Viabilidade, Escalabilidade e Encerramento</div>
+      <ul class="topic-list">
+        <li><strong>Custo de Operação Mínimo:</strong> Arquitetura serverless de alta eficiência, viabilizando adoção imediata pela Associação na próxima temporada.</li>
+        <li><strong>Escalabilidade:</strong> Já preparado com todas as praias de Guarapari e pronto para expansão em cidades vizinhas (Anchieta, Vila Velha, Vitória).</li>
+        <li><strong>Fechamento:</strong> Agradecimento à faculdade, aos coordenadores da maratona e abertura para a banca.</li>
+      </ul>
+      <div class="quote-box" style="background: #EFF6FF; border-color: #0B6EFD; color: #1E40AF; font-weight: 700;">
+        "O Anjos da Praia une a tecnologia criada na sala de aula da Anhanguera à proteção das famílias capixabas na nossa orla. Muito obrigado!"
+      </div>
+    </div>
+  </div>
+
+  <!-- DICAS DE APRESENTAÇÃO -->
+  <div class="footer-tips">
+    <h4>🎯 Checklist Rápido para a Apresentação no Auditório</h4>
+    <ul>
+      <li><strong>Abas Preparadas:</strong> Deixar uma aba aberta no painel administrativo (<code>/admin</code>) e outra na visão mobile do banhista (<code>/alerta</code>).</li>
+      <li><strong>Dados Populados:</strong> Banco já abastecido via <code>seeds.sql</code> com ocorrências em todas as 5 situações para navegação imediata.</li>
+      <li><strong>Controle de Tempo:</strong> Manter cronômetro visível com a equipe para garantir a conclusão antes dos 10 minutos regulamentares.</li>
+    </ul>
+  </div>
+
+</body>
+</html>
