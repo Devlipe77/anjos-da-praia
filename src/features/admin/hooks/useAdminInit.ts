@@ -1,30 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, dataService } from '../../../lib/supabase';
 import { useAdminStore } from '../../../store/useAdminStore';
 
 export const useAdminInit = () => {
   const navigate = useNavigate();
+  const initializedRef = useRef(false);
 
-  const {
-    mostrarToast,
-    carregarDados,
-    carregarOperadoresEConvites,
-    sincronizarOcorrenciaRealtime,
-    setOperadorSession,
-    setTendaOperador,
-    setPwaInstalavel,
-    setAppJaInstalado,
-    setDeferredPrompt,
-    loading,
-    secaoAtiva,
-  } = useAdminStore();
-
-  // 1. Ciclo de Vida de Autenticação, Carregamento Inicial e Realtime Supabase
+  // 1. Ciclo de Vida de Autenticação, Carregamento Inicial e Realtime Supabase (executa estritamente UMA vez)
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     let unsubscribeRealtime: (() => void) | null = null;
 
     const inicializarAdmin = async () => {
+      const store = useAdminStore.getState();
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -33,7 +25,7 @@ export const useAdminInit = () => {
           const email = session.user.email || 'operador@anjosdapraia.org';
           const metaNome = session.user.user_metadata?.nome || 'Operador Central';
 
-          setOperadorSession({
+          store.setOperadorSession({
             operadorUserId: userId,
             operadorEmail: email,
             operadorNome: metaNome,
@@ -43,13 +35,13 @@ export const useAdminInit = () => {
           const op = await dataService.obterOperador(userId);
           if (op) {
             if (op.status === 'bloqueado') {
-              mostrarToast('erro', 'Acesso bloqueado pela coordenação.');
+              store.mostrarToast('erro', 'Acesso bloqueado pela coordenação.');
               await supabase.auth.signOut();
               navigate('/login', { replace: true });
               return;
             }
 
-            setOperadorSession({
+            store.setOperadorSession({
               operadorNome: op.nome || metaNome,
               operadorRole: op.role || 'operador',
               operadorStatus: op.status || 'ativo',
@@ -60,7 +52,7 @@ export const useAdminInit = () => {
               const todasTendas = await dataService.listarTendas();
               const tendaAssociada = todasTendas.find(t => t.id === op.tenda_id);
               if (tendaAssociada) {
-                setTendaOperador(tendaAssociada.nome);
+                store.setTendaOperador(tendaAssociada.nome);
                 useAdminStore.setState({ tendaOperadorObj: tendaAssociada });
               }
             }
@@ -77,13 +69,13 @@ export const useAdminInit = () => {
 
       // Carregar dados das ocorrências, cadastros e equipe
       await Promise.all([
-        carregarDados(),
-        carregarOperadoresEConvites(),
+        store.carregarDados(),
+        store.carregarOperadoresEConvites(),
       ]);
 
       // Assinar atualizações em tempo real via Supabase Realtime
       unsubscribeRealtime = dataService.subscribeOcorrencias((oco?: any) => {
-        sincronizarOcorrenciaRealtime(oco);
+        store.sincronizarOcorrenciaRealtime(oco);
       });
     };
 
@@ -94,15 +86,7 @@ export const useAdminInit = () => {
         unsubscribeRealtime();
       }
     };
-  }, [
-    navigate,
-    mostrarToast,
-    carregarDados,
-    carregarOperadoresEConvites,
-    sincronizarOcorrenciaRealtime,
-    setOperadorSession,
-    setTendaOperador,
-  ]);
+  }, [navigate]);
 
   // 2. Solicitação de Permissão para Notificações Web Nativas
   useEffect(() => {
@@ -115,7 +99,8 @@ export const useAdminInit = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Detectar se já está rodando standalone (PWA instalado)
+    const store = useAdminStore.getState();
+
     const checkIsRunningStandalone = () => {
       const isStandalone =
         window.matchMedia('(display-mode: standalone)').matches ||
@@ -126,17 +111,16 @@ export const useAdminInit = () => {
         document.referrer.includes('android-app://');
 
       if (isStandalone) {
-        setAppJaInstalado(true);
+        store.setAppJaInstalado(true);
       }
     };
 
     checkIsRunningStandalone();
 
-    // Ouvir alterações dinâmicas de display-mode
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleDisplayModeChange = (e: MediaQueryListEvent) => {
       if (e.matches) {
-        setAppJaInstalado(true);
+        store.setAppJaInstalado(true);
       }
     };
 
@@ -146,22 +130,20 @@ export const useAdminInit = () => {
       mediaQuery.addListener(handleDisplayModeChange);
     }
 
-    // Capturar evento beforeinstallprompt nativo
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
-      setPwaInstalavel(true);
-      setAppJaInstalado(false);
+      store.setDeferredPrompt(e);
+      store.setPwaInstalavel(true);
+      store.setAppJaInstalado(false);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Evento disparado quando o app é instalado com sucesso
     const handleAppInstalled = () => {
-      setPwaInstalavel(false);
-      setDeferredPrompt(null);
-      setAppJaInstalado(true);
-      mostrarToast('sucesso', 'Aplicativo Anjos da Praia instalado com sucesso!');
+      store.setPwaInstalavel(false);
+      store.setDeferredPrompt(null);
+      store.setAppJaInstalado(true);
+      store.mostrarToast('sucesso', 'Aplicativo Anjos da Praia instalado com sucesso!');
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -175,10 +157,5 @@ export const useAdminInit = () => {
         mediaQuery.removeListener(handleDisplayModeChange);
       }
     };
-  }, [setAppJaInstalado, setPwaInstalavel, setDeferredPrompt, mostrarToast]);
-
-  return {
-    loading,
-    secaoAtiva,
-  };
+  }, []);
 };

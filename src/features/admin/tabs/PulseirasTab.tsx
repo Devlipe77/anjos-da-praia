@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Users, 
   Search, 
@@ -7,10 +7,7 @@ import {
   Edit3, 
   Trash2 
 } from 'lucide-react';
-import { 
-  useAdminStore, 
-  selectCadastrosFiltrados 
-} from '../../../store/useAdminStore';
+import { useAdminStore } from '../../../store/useAdminStore';
 
 export const PulseirasTab: React.FC = () => {
   const {
@@ -23,7 +20,16 @@ export const PulseirasTab: React.FC = () => {
     setModalExclusaoPulseira
   } = useAdminStore();
 
-  const cadastrosFiltrados = useAdminStore(selectCadastrosFiltrados);
+  const cadastrosFiltrados = useMemo(() => {
+    const q = termoBuscaPulseira.toLowerCase().trim();
+    if (!q) return cadastros;
+    return cadastros.filter(c =>
+      c.numero_pulseira.toLowerCase().includes(q) ||
+      c.nome_responsavel.toLowerCase().includes(q) ||
+      (c.nome_crianca && c.nome_crianca.toLowerCase().includes(q)) ||
+      c.telefone_contato.includes(q)
+    );
+  }, [cadastros, termoBuscaPulseira]);
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-[#E5E7EB] shadow-sm space-y-4 animate-in fade-in duration-200">

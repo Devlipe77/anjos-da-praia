@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   X, 
@@ -13,7 +13,7 @@ import {
   UserCheck, 
   LogOut 
 } from 'lucide-react';
-import { useAdminStore, selectChamadosAtivos } from '../../../store/useAdminStore';
+import { useAdminStore } from '../../../store/useAdminStore';
 
 export const AdminSidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -29,10 +29,14 @@ export const AdminSidebar: React.FC = () => {
     operadorNome,
     operadorEmail,
     operadorRole,
-    logout
+    logout,
+    ocorrencias
   } = useAdminStore();
 
-  const chamadosAtivos = useAdminStore(selectChamadosAtivos);
+  const chamadosAtivos = useMemo(
+    () => ocorrencias.filter(o => o.status !== 'Reencontro realizado'),
+    [ocorrencias]
+  );
 
   const handleLogout = async () => {
     await logout(navigate);

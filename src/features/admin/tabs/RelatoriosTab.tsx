@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   FileSpreadsheet, 
   FileDown, 
@@ -6,10 +6,7 @@ import {
   Search, 
   MapPin 
 } from 'lucide-react';
-import { 
-  useAdminStore, 
-  selectOcorrenciasRelatorios 
-} from '../../../store/useAdminStore';
+import { useAdminStore } from '../../../store/useAdminStore';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { formatarDataHora } from '../utils/formatters';
 import { exportarRelatorioCSV } from '../utils/exportCsv';
@@ -31,7 +28,44 @@ export const RelatoriosTab: React.FC = () => {
     mostrarToast
   } = useAdminStore();
 
-  const ocorrenciasRelatorios = useAdminStore(selectOcorrenciasRelatorios);
+  const ocorrenciasRelatorios = useMemo(() => {
+    const agora = new Date().getTime();
+    return ocorrencias.filter(o => {
+      // Filtro de Praia
+      if (filtroRelatorioPraia !== 'todas') {
+        const praiaOco = o.cadastro?.praia_origem || o.tendaMaisProxima?.tenda?.praia;
+        if (praiaOco !== filtroRelatorioPraia) return false;
+      }
+
+      // Filtro de Status
+      if (filtroRelatorioStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroRelatorioStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+
+      // Filtro de Situação / Etapa
+      if (filtroRelatorioSituacao !== 'todas' && o.status !== filtroRelatorioSituacao) return false;
+
+      // Filtro de Período
+      if (filtroRelatorioPeriodo !== 'tudo') {
+        const dataOco = new Date(o.horario_alerta).getTime();
+        const diffHoras = (agora - dataOco) / (1000 * 60 * 60);
+        if (filtroRelatorioPeriodo === 'hoje' && diffHoras > 24) return false;
+        if (filtroRelatorioPeriodo === '7dias' && diffHoras > 24 * 7) return false;
+        if (filtroRelatorioPeriodo === '30dias' && diffHoras > 24 * 30) return false;
+      }
+
+      // Filtro de Busca
+      if (filtroRelatorioBusca.trim()) {
+        const q = filtroRelatorioBusca.toLowerCase().trim();
+        const pulseiraMatch = o.numero_pulseira.toLowerCase().includes(q);
+        const criancaMatch = o.cadastro?.nome_crianca?.toLowerCase().includes(q);
+        const respMatch = o.cadastro?.nome_responsavel?.toLowerCase().includes(q);
+        const telMatch = o.cadastro?.telefone_contato?.includes(q);
+        if (!pulseiraMatch && !criancaMatch && !respMatch && !telMatch) return false;
+      }
+
+      return true;
+    });
+  }, [ocorrencias, filtroRelatorioPraia, filtroRelatorioStatus, filtroRelatorioSituacao, filtroRelatorioPeriodo, filtroRelatorioBusca]);
 
   const handleExportarCsv = () => {
     exportarRelatorioCSV(ocorrenciasRelatorios, (msg, tipo) => {

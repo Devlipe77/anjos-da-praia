@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Filter, 
   Users, 
@@ -8,14 +8,7 @@ import {
   Flame, 
   Tent 
 } from 'lucide-react';
-import { 
-  useAdminStore, 
-  selectChamadosAtivos, 
-  selectOcorrenciasDashboard, 
-  selectDashCadastrosCount, 
-  selectDashAtivosCount, 
-  selectDashConcluidosCount 
-} from '../../../store/useAdminStore';
+import { useAdminStore } from '../../../store/useAdminStore';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { KpiCard } from '../components/KpiCard';
 
@@ -30,14 +23,43 @@ export const DashboardTab: React.FC = () => {
     operadorTendaId,
     tendas,
     setSecaoAtiva,
-    setSelectedOcorrencia
+    setSelectedOcorrencia,
+    ocorrencias,
+    cadastros
   } = useAdminStore();
 
-  const chamadosAtivos = useAdminStore(selectChamadosAtivos);
-  const ocorrenciasDashboard = useAdminStore(selectOcorrenciasDashboard);
-  const dashCadastrosCount = useAdminStore(selectDashCadastrosCount);
-  const dashAtivosCount = useAdminStore(selectDashAtivosCount);
-  const dashConcluidosCount = useAdminStore(selectDashConcluidosCount);
+  const chamadosAtivos = useMemo(
+    () => ocorrencias.filter(o => o.status !== 'Reencontro realizado'),
+    [ocorrencias]
+  );
+
+  const ocorrenciasDashboard = useMemo(() => {
+    return ocorrencias.filter(o => {
+      if (filtroDashStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroDashStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+      if (filtroDashSituacao !== 'todas' && o.status !== filtroDashSituacao) return false;
+      if (filtroDashTendaId !== 'todas') {
+        const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
+        if (tendaIdOco !== filtroDashTendaId) return false;
+      }
+      return true;
+    });
+  }, [ocorrencias, filtroDashStatus, filtroDashSituacao, filtroDashTendaId]);
+
+  const dashCadastrosCount = useMemo(() => {
+    if (filtroDashTendaId === 'todas') return cadastros.length;
+    return cadastros.filter(c => c.tenda_id === filtroDashTendaId).length;
+  }, [cadastros, filtroDashTendaId]);
+
+  const dashAtivosCount = useMemo(
+    () => ocorrenciasDashboard.filter(o => o.status !== 'Reencontro realizado').length,
+    [ocorrenciasDashboard]
+  );
+
+  const dashConcluidosCount = useMemo(
+    () => ocorrenciasDashboard.filter(o => o.status === 'Reencontro realizado').length,
+    [ocorrenciasDashboard]
+  );
 
   const taxaSucesso = ocorrenciasDashboard.length > 0 
     ? Math.round((dashConcluidosCount / ocorrenciasDashboard.length) * 100) 

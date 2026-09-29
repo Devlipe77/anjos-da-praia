@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Bell, 
   Search, 
@@ -9,11 +9,7 @@ import {
   ShieldCheck, 
   Trash2 
 } from 'lucide-react';
-import { 
-  useAdminStore, 
-  selectChamadosAtivos, 
-  selectOcorrenciasMonitoramento 
-} from '../../../store/useAdminStore';
+import { useAdminStore } from '../../../store/useAdminStore';
 import { StatusOcorrencia } from '../../../types';
 import { MapView } from '../../../components/MapView';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -35,11 +31,43 @@ export const MonitoramentoTab: React.FC = () => {
     setSelectedOcorrencia,
     mudarStatusOcorrencia,
     setModalHistoricoOcorrencia,
-    setModalExclusaoOcorrencia
+    setModalExclusaoOcorrencia,
+    ocorrencias
   } = useAdminStore();
 
-  const chamadosAtivos = useAdminStore(selectChamadosAtivos);
-  const ocorrenciasMonitoramento = useAdminStore(selectOcorrenciasMonitoramento);
+  const chamadosAtivos = useMemo(
+    () => ocorrencias.filter(o => o.status !== 'Reencontro realizado'),
+    [ocorrencias]
+  );
+
+  const ocorrenciasMonitoramento = useMemo(() => {
+    return ocorrencias.filter(o => {
+      // Filtro de Status
+      if (filtroMonitorStatus === 'ativos' && o.status === 'Reencontro realizado') return false;
+      if (filtroMonitorStatus === 'concluidos' && o.status !== 'Reencontro realizado') return false;
+
+      // Filtro de Situação / Etapa
+      if (filtroMonitorSituacao !== 'todas' && o.status !== filtroMonitorSituacao) return false;
+
+      // Filtro de Tenda
+      if (filtroMonitorTendaId !== 'todas') {
+        const tendaIdOco = o.tendaMaisProxima?.tenda?.id || o.tenda_atendimento_id;
+        if (tendaIdOco !== filtroMonitorTendaId) return false;
+      }
+
+      // Filtro de Busca Texto
+      if (filtroMonitorBusca.trim()) {
+        const q = filtroMonitorBusca.toLowerCase().trim();
+        const pulseiraMatch = o.numero_pulseira.toLowerCase().includes(q);
+        const criancaMatch = o.cadastro?.nome_crianca?.toLowerCase().includes(q);
+        const respMatch = o.cadastro?.nome_responsavel?.toLowerCase().includes(q);
+        const telMatch = o.cadastro?.telefone_contato?.includes(q);
+        if (!pulseiraMatch && !criancaMatch && !respMatch && !telMatch) return false;
+      }
+
+      return true;
+    });
+  }, [ocorrencias, filtroMonitorStatus, filtroMonitorSituacao, filtroMonitorTendaId, filtroMonitorBusca]);
 
   const handleMudarStatus = (id: string, novoStatus: StatusOcorrencia, oco?: any) => {
     mudarStatusOcorrencia(id, novoStatus, oco);
