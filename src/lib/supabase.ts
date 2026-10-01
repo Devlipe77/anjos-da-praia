@@ -1,17 +1,22 @@
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus, Praia, ConviteOperador } from '../types';
+import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+import type { PulseiraCadastro, Ocorrencia, StatusOcorrencia, Tenda, Operador, ItemHistoricoStatus, Praia, ConviteOperador } from '../types';
+
+const nodeEnv = (typeof process !== 'undefined' && process && process.env) ? process.env : {};
+const viteEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) ? (import.meta as any).env : {};
+const env: Record<string, string | undefined> = { ...nodeEnv, ...viteEnv };
 
 const supabaseUrl = 
-  import.meta.env.VITE_SUPABASE_URL || 
-  import.meta.env.NEXT_PUBLIC_SUPABASE_URL || 
-  import.meta.env.SUPABASE_URL || 
+  env.VITE_SUPABASE_URL || 
+  env.NEXT_PUBLIC_SUPABASE_URL || 
+  env.SUPABASE_URL || 
   '';
 
 const supabaseAnonKey = 
-  import.meta.env.VITE_SUPABASE_ANON_KEY || 
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-  import.meta.env.SUPABASE_ANON_KEY || 
+  env.VITE_SUPABASE_ANON_KEY || 
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+  env.SUPABASE_ANON_KEY || 
   '';
 
 export const isSupabaseConfigured = Boolean(
@@ -29,6 +34,9 @@ export const supabase: SupabaseClient = createClient(
 // CÁLCULO GEODÉSICO DE DISTÂNCIA (Fórmula de Haversine)
 // ==========================================================
 function calcularDistanciaMetros(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+    return 0;
+  }
   const R = 6371e3; // Raio da Terra em metros
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
@@ -38,10 +46,27 @@ function calcularDistanciaMetros(lat1: number, lon1: number, lat2: number, lon2:
   const a =
     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
     Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const clampedA = Math.min(1, Math.max(0, a));
+  const c = 2 * Math.atan2(Math.sqrt(clampedA), Math.sqrt(1 - clampedA));
 
   return Math.round(R * c);
 }
+
+// ==========================================================
+// CACHE EM MEMÓRIA (TENDAS E POSTOS)
+// ==========================================================
+function clonarTendas(tendas: Tenda[]): Tenda[] {
+  return (tendas || []).map(t => ({ ...t }));
+}
+
+let tendasCache: {
+  data: Tenda[];
+  timestamp: number;
+} | null = null;
+
+let tendasPromise: Promise<Tenda[]> | null = null;
+let tendasCacheVersion = 0;
+const TENDAS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de cache em memória
 
 // ==========================================================
 // SERVIÇO DE DADOS SUPABASE (CRUD DIRETO E 100% REAL)
@@ -51,17 +76,65 @@ export const dataService = {
   // --------------------------------------------------------
   // 1. TENDAS E POSTOS
   // --------------------------------------------------------
-  async listarTendas(): Promise<Tenda[]> {
-    const { data, error } = await supabase
-      .from('tendas')
-      .select('*')
-      .order('criado_em', { ascending: true });
+  limparCacheTendas(): void {
+    tendasCache = null;
+    tendasPromise = null;
+    tendasCacheVersion++;
+  },
 
-    if (error) {
-      console.warn('Tabela tendas pode ainda estar sendo criada no Supabase:', error.message);
-      return [];
+  async listarTendas(forcarRecarregamento = false): Promise<Tenda[]> {
+    if (forcarRecarregamento) {
+      dataService.limparCacheTendas();
     }
-    return data || [];
+
+    const agora = Date.now();
+    if (!forcarRecarregamento && tendasCache && (agora - tendasCache.timestamp < TENDAS_CACHE_TTL_MS)) {
+      return clonarTendas(tendasCache.data);
+    }
+
+    if (!forcarRecarregamento && tendasPromise) {
+      const data = await tendasPromise;
+      return clonarTendas(data);
+    }
+
+    const version = tendasCacheVersion;
+    tendasPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tendas')
+          .select('*')
+          .order('criado_em', { ascending: true });
+
+        if (error) {
+          console.warn('Tabela tendas pode ainda estar sendo criada no Supabase:', error.message);
+          return tendasCache ? clonarTendas(tendasCache.data) : [];
+        }
+
+        const resultado: Tenda[] = (data || []).map((t: any): Tenda => ({
+          ...t,
+          latitude: typeof t.latitude === 'number' ? t.latitude : Number(t.latitude),
+          longitude: typeof t.longitude === 'number' ? t.longitude : Number(t.longitude),
+        }));
+
+        if (version === tendasCacheVersion) {
+          tendasCache = {
+            data: resultado,
+            timestamp: Date.now(),
+          };
+        }
+        return resultado;
+      } catch (err) {
+        console.warn('Erro ao carregar tendas do Supabase:', err);
+        return tendasCache ? clonarTendas(tendasCache.data) : [];
+      } finally {
+        if (version === tendasCacheVersion) {
+          tendasPromise = null;
+        }
+      }
+    })();
+
+    const finalData = await tendasPromise;
+    return clonarTendas(finalData);
   },
  
   // --------------------------------------------------------
@@ -77,7 +150,11 @@ export const dataService = {
       console.warn('Tabela praias pode não ter sido criada ainda no Supabase:', error.message);
       return [];
     }
-    return data || [];
+    return (data || []).map((p: any): Praia => ({
+      ...p,
+      latitude_padrao: typeof p.latitude_padrao === 'number' ? p.latitude_padrao : Number(p.latitude_padrao),
+      longitude_padrao: typeof p.longitude_padrao === 'number' ? p.longitude_padrao : Number(p.longitude_padrao),
+    }));
   },
 
   async criarPraia(praia: Omit<Praia, 'id' | 'criado_em'>): Promise<Praia> {
@@ -113,6 +190,7 @@ export const dataService = {
       .single();
 
     if (error) throw error;
+    dataService.limparCacheTendas();
     return data;
   },
 
@@ -125,6 +203,7 @@ export const dataService = {
       .single();
 
     if (error) throw error;
+    dataService.limparCacheTendas();
     return data;
   },
 
@@ -135,28 +214,65 @@ export const dataService = {
       .eq('id', id);
 
     if (error) throw error;
+    dataService.limparCacheTendas();
   },
 
   calcularTendaMaisProxima(
-    lat: number, 
-    lng: number, 
+    lat: number | string | null | undefined, 
+    lng: number | string | null | undefined, 
     tendas: Tenda[]
   ): { tenda: Tenda; distanciaMetros: number } | null {
-    const ativas = tendas.filter(t => t.ativa !== false);
+    if (lat === null || lat === undefined || lng === null || lng === undefined) return null;
+    if (typeof lat !== 'number' && typeof lat !== 'string') return null;
+    if (typeof lng !== 'number' && typeof lng !== 'string') return null;
+    if (typeof lat === 'string' && lat.trim() === '') return null;
+    if (typeof lng === 'string' && lng.trim() === '') return null;
+
+    const numLat = Number(lat);
+    const numLng = Number(lng);
+    if (!Number.isFinite(numLat) || !Number.isFinite(numLng)) return null;
+
+    // Coordenadas nulas/inválidas de GPS (0, 0 / Null Island)
+    if (numLat === 0 && numLng === 0) return null;
+
+    // Limites de coordenadas geográficas terrestres
+    if (numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) return null;
+
+    const ativas = (Array.isArray(tendas) ? tendas : []).filter(t => {
+      if (!t || t.ativa === false) return false;
+      const rawLat = (t as any).latitude;
+      const rawLng = (t as any).longitude;
+      if (rawLat === null || rawLat === undefined || rawLng === null || rawLng === undefined) return false;
+      if (typeof rawLat !== 'number' && typeof rawLat !== 'string') return false;
+      if (typeof rawLng !== 'number' && typeof rawLng !== 'string') return false;
+      if (typeof rawLat === 'string' && rawLat.trim() === '') return false;
+      if (typeof rawLng === 'string' && rawLng.trim() === '') return false;
+      const tLat = Number(rawLat);
+      const tLng = Number(rawLng);
+      return Number.isFinite(tLat) && Number.isFinite(tLng) && !(tLat === 0 && tLng === 0) && tLat >= -90 && tLat <= 90 && tLng >= -180 && tLng <= 180;
+    });
+
     if (ativas.length === 0) return null;
 
     let maisProxima = ativas[0];
-    let menorDistancia = calcularDistanciaMetros(lat, lng, ativas[0].latitude, ativas[0].longitude);
+    let menorDistancia = calcularDistanciaMetros(numLat, numLng, Number(ativas[0].latitude), Number(ativas[0].longitude));
 
     for (let i = 1; i < ativas.length; i++) {
-      const d = calcularDistanciaMetros(lat, lng, ativas[i].latitude, ativas[i].longitude);
+      const d = calcularDistanciaMetros(numLat, numLng, Number(ativas[i].latitude), Number(ativas[i].longitude));
       if (d < menorDistancia) {
         menorDistancia = d;
         maisProxima = ativas[i];
       }
     }
 
-    return { tenda: maisProxima, distanciaMetros: menorDistancia };
+    return {
+      tenda: {
+        ...maisProxima,
+        latitude: Number(maisProxima.latitude),
+        longitude: Number(maisProxima.longitude),
+      },
+      distanciaMetros: menorDistancia,
+    };
   },
 
   // --------------------------------------------------------
@@ -264,30 +380,71 @@ export const dataService = {
   },
 
   async listarOcorrencias(): Promise<Ocorrencia[]> {
+    let rawOcorrencias: any[] | null = null;
+
     const { data: ocorrencias, error: errOco } = await supabase
       .from('ocorrencias')
-      .select('*')
+      .select('*, cadastro:cadastros_pulseiras(*)')
       .order('horario_alerta', { ascending: false });
 
-    if (errOco) throw errOco;
+    if (errOco) {
+      // Fallback resiliente caso a relação não exista no schema cache do PostgREST
+      const msg = (errOco.message || '').toLowerCase();
+      const isPostgrestRelError =
+        errOco.code === 'PGRST200' ||
+        errOco.code === 'PGRST201' ||
+        errOco.code === 'PGRST202' ||
+        Boolean(errOco.code && typeof errOco.code === 'string' && errOco.code.startsWith('PGRST2')) ||
+        msg.includes('relationship') ||
+        msg.includes('schema cache') ||
+        msg.includes('relation') ||
+        msg.includes('foreign key') ||
+        msg.includes('fkey') ||
+        msg.includes('embed');
 
-    // Buscar cadastros e tendas para enriquecer a ocorrência
-    const [resCad, resTen] = await Promise.all([
-      supabase.from('cadastros_pulseiras').select('*'),
-      supabase.from('tendas').select('*'),
-    ]);
+      if (isPostgrestRelError) {
+        console.warn('PostgREST foreign key relationship não encontrada no schema cache, executando fallback simples:', errOco.message);
+        const fallback = await supabase
+          .from('ocorrencias')
+          .select('*')
+          .order('horario_alerta', { ascending: false });
+        if (fallback.error) throw fallback.error;
+        rawOcorrencias = fallback.data;
+      } else {
+        throw errOco;
+      }
+    } else {
+      rawOcorrencias = ocorrencias;
+    }
 
-    const cadMap = new Map((resCad.data || []).map(c => [c.numero_pulseira, c]));
-    const tendasList: Tenda[] = resTen.data || [];
+    // Obter tendas via cache em memória para calcular o posto mais próximo
+    const tendasList = await dataService.listarTendas();
 
-    return (ocorrencias || []).map((oco) => {
+    return (rawOcorrencias || []).map((oco: any): Ocorrencia => {
+      // Tratar o retorno do relacionamento PostgREST (objeto direto ou array)
+      const rawCad = Array.isArray(oco.cadastro) ? oco.cadastro[0] : oco.cadastro;
+      const cadastro: PulseiraCadastro | undefined = (rawCad && typeof rawCad === 'object' && (rawCad.numero_pulseira || rawCad.id))
+        ? { ...(rawCad as PulseiraCadastro) }
+        : undefined;
+
+      const latParsed = typeof oco.latitude === 'string' && oco.latitude.trim() === '' ? NaN : Number(oco.latitude);
+      const lngParsed = typeof oco.longitude === 'string' && oco.longitude.trim() === '' ? NaN : Number(oco.longitude);
+      const numLat = Number.isFinite(latParsed) ? latParsed : (typeof oco.latitude === 'number' ? oco.latitude : 0);
+      const numLng = Number.isFinite(lngParsed) ? lngParsed : (typeof oco.longitude === 'number' ? oco.longitude : 0);
+
+      const precParsed = oco.precisao_metros != null ? Number(oco.precisao_metros) : undefined;
+      const precisaoMetros = (precParsed !== undefined && Number.isFinite(precParsed)) ? precParsed : undefined;
+
       const maisProxima = tendasList.length > 0 
-        ? dataService.calcularTendaMaisProxima(oco.latitude, oco.longitude, tendasList)
+        ? dataService.calcularTendaMaisProxima(numLat, numLng, tendasList)
         : null;
 
       return {
         ...oco,
-        cadastro: cadMap.get(oco.numero_pulseira),
+        latitude: numLat,
+        longitude: numLng,
+        precisao_metros: precisaoMetros,
+        cadastro,
         tendaMaisProxima: maisProxima || undefined,
       };
     });

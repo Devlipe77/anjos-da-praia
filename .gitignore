@@ -27,3 +27,6 @@ docs/*
 # Environment
 .env.local
 .env.*.local
+
+# Agent metadata
+.agents/

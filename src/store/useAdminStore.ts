@@ -446,23 +446,23 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         dataService.listarConvites()
       ]);
 
-      // Enriquecer ocorrências com cadastro da pulseira
+      // Enriquecer ocorrências com cadastro da pulseira (preserva caso já preenchido via PostgREST)
       if (ocos.length > 0 && cads.length > 0) {
         const cadsMap = new Map<string, PulseiraCadastro>();
         cads.forEach(c => cadsMap.set(c.numero_pulseira, c));
         ocos.forEach(o => {
-          o.cadastro = cadsMap.get(o.numero_pulseira);
+          o.cadastro = o.cadastro || cadsMap.get(o.numero_pulseira);
         });
       }
 
       // Calcular tenda mais próxima
       if (ocos.length > 0 && tens.length > 0) {
         ocos.forEach(o => {
-          o.tendaMaisProxima = dataService.calcularTendaMaisProxima(
-            Number(o.latitude),
-            Number(o.longitude),
+          o.tendaMaisProxima = o.tendaMaisProxima || (dataService.calcularTendaMaisProxima(
+            o.latitude,
+            o.longitude,
             tens
-          );
+          ) || undefined);
         });
       }
 
